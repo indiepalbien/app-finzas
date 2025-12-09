@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}List — Manage{% endblock %}
+
+{% block content %}
+  <h1>{{ model_verbose_name_plural|capfirst }}</h1>
+  <p><a href="{% url create_url_name %}">Añadir nuevo</a></p>
+  <ul>
+    {% for obj in object_list %}
+      <li>{{ obj }} — <a href="{% url edit_url_name obj.pk %}">Editar</a></li>
+    {% empty %}
+      <li>No hay elementos.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

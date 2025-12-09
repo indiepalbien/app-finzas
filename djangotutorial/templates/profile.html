@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi perfil — App-Finanzas{% endblock %}
+
+{% block content %}
+  <h1>Hola, {{ user.username }}</h1>
+  <p>Esta es tu página de usuario.</p>
+  <p><a href="{% url 'polls:manage_dashboard' %}">Gestionar mis datos</a></p>
+{% endblock %}

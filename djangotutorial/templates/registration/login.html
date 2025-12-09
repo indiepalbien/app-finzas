@@ -1,0 +1,39 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ingresar</title>
+    <link rel="stylesheet" href="{% static 'polls/style.css' %}">
+  </head>
+  <body>
+    <main class="container">
+      <h1>Ingresar</h1>
+
+      {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <div>
+          <label for="id_username">Usuario</label>
+          <input type="text" name="username" id="id_username" required autofocus>
+        </div>
+        <div>
+          <label for="id_password">Contraseña</label>
+          <input type="password" name="password" id="id_password" required>
+        </div>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit">Ingresar</button>
+      </form>
+
+      <p>¿No tenés cuenta? <a href="{% url 'register' %}">Registrate</a></p>
+    </main>
+  </body>
+</html>

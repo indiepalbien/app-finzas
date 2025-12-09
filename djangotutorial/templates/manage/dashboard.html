@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage — App-Finanzas{% endblock %}
+
+{% block content %}
+  <h1>Gestionar datos</h1>
+  <ul>
+    {% for name, url_name in resources %}
+      <li><a href="{% url url_name %}">{{ name }}</a></li>
+    {% endfor %}
+  </ul>
+{% endblock %}
