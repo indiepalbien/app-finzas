@@ -3,6 +3,7 @@
 {% block title %}Form — Manage{% endblock %}
 
 {% block content %}
+  <p><a href="javascript:history.back()">← Volver</a></p>
   <h1>Crear / Editar {{ model_verbose_name }}</h1>
   <form method="post">
     {% csrf_token %}

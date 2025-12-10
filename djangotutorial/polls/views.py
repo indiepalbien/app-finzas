@@ -1,15 +1,12 @@
 # Create your views here.
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.template import loader
-from django.http import Http404
 from .models import Question
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.views import generic
 from django.urls import reverse
-from django.http import HttpResponseRedirect
 from django.db.models import F
 from django.utils import timezone
-from django.shortcuts import redirect
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -17,6 +14,144 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from .models import Category, Project, Payee, Source, Exchange, Balance, Transaction, Choice
+from django.views.decorators.http import require_POST, require_GET
+from django.utils import timezone as dj_timezone
+from decimal import Decimal, InvalidOperation
+import datetime
+
+@login_required
+@require_POST
+def quick_transaction(request):
+    """Handle small inline form to create a Transaction quickly.
+
+    Behavior:
+    - Required: description, amount, date, currency.
+    - Shows existing DB options in the form (via datalist); on submit, missing related objects are created for the user (cascade).
+    - Returns JSON when request is AJAX/JSON (used by inline JS) or redirects with messages for normal POST.
+    """
+    user = request.user
+    data = request.POST
+
+    # Required fields
+    description = (data.get("description") or "").strip()
+    amount = data.get("amount")
+    date_str = data.get("date")
+    currency = (data.get("currency") or "").upper().strip()
+
+    # Optional fields: category, project, payee, source
+    def get_or_create_model(model, name):
+        if not name:
+            return None
+        obj = model.objects.filter(user=user, name__iexact=name.strip()).first()
+        if obj:
+            return obj
+        return model.objects.create(user=user, name=name.strip())
+
+    category_name = data.get("category")
+    project_name = data.get("project")
+    payee_name = data.get("payee")
+    source_name = data.get("source")
+
+    # Validate required fields
+    errors = []
+    if not description:
+        errors.append("Descripción requerida.")
+    if not amount:
+        errors.append("Amount is required.")
+    if not date_str:
+        errors.append("Date is required.")
+    if not currency:
+        errors.append("Currency is required.")
+
+    # Validate currency format (ISO-4217 style: 3 letters)
+    if currency and (len(currency) != 3 or not currency.isalpha()):
+        errors.append("Currency must be a 3-letter code (ISO-4217).")
+
+    # If any errors, respond appropriately
+    if errors:
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or request.META.get("HTTP_ACCEPT", "").find("application/json") != -1:
+            return JsonResponse({"success": False, "errors": errors}, status=400)
+        for e in errors:
+            messages.error(request, e)
+        return redirect("profile")
+
+    # Parse amount and date
+    try:
+        amount_dec = Decimal(amount)
+    except (InvalidOperation, TypeError):
+        msg = "Amount must be a number."
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "errors": [msg]}, status=400)
+        messages.error(request, msg)
+        return redirect("profile")
+
+    try:
+        tx_date = datetime.date.fromisoformat(date_str)
+    except Exception:
+        msg = "Invalid date format. Use YYYY-MM-DD."
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "errors": [msg]}, status=400)
+        messages.error(request, msg)
+        return redirect("profile")
+
+    # Create or get related objects (cascade)
+    category = get_or_create_model(Category, category_name)
+    project = get_or_create_model(Project, project_name)
+    payee = get_or_create_model(Payee, payee_name)
+    source = get_or_create_model(Source, source_name)
+
+    comments = data.get("comments", "")
+
+    try:
+        tx = Transaction.objects.create(
+            user=user,
+            date=tx_date,
+            description=description,
+            amount=amount_dec,
+            currency=currency,
+            source=source,
+            category=category,
+            project=project,
+            payee=payee,
+            comments=comments,
+        )
+        success_msg = "Transacción añadida."
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or request.META.get("HTTP_ACCEPT", "").find("application/json") != -1:
+            return JsonResponse({"success": True, "message": success_msg, "id": tx.id})
+        messages.success(request, success_msg)
+    except Exception as e:
+        err = f"Error creando transacción: {e}"
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "errors": [err]}, status=500)
+        messages.error(request, err)
+
+    return redirect("profile")
+
+
+@login_required
+@require_GET
+def suggest(request, kind):
+    """Return a JSON list of existing names for `kind`.
+
+    `kind` is one of: category, project, payee
+    Query param `q` filters by prefix (case-insensitive).
+    Only returns existing DB entries (does not create).
+    """
+    q = request.GET.get("q", "").strip()
+    mapping = {
+        "category": Category,
+        "project": Project,
+        "payee": Payee,
+        "source": Source,
+    }
+    Model = mapping.get(kind)
+    if not Model:
+        return JsonResponse({"results": []})
+    qs = Model.objects.filter(user=request.user)
+    if q:
+        qs = qs.filter(name__istartswith=q)
+    names = list(qs.order_by("name").values_list("name", flat=True)[:25])
+    return JsonResponse({"results": names})
 
 
 @login_required
@@ -200,14 +335,14 @@ class TransactionListView(OwnerListView):
 
 class TransactionCreateView(OwnerCreateView):
     model = Transaction
-    fields = ["date", "amount", "currency", "source", "category", "project", "payee", "comments"]
+    fields = ["date", "description", "amount", "currency", "source", "category", "project", "payee", "comments"]
     template_name = "manage/form.html"
     success_url = reverse_lazy("polls:manage_transactions")
 
 
 class TransactionUpdateView(OwnerUpdateView):
     model = Transaction
-    fields = ["date", "amount", "currency", "source", "category", "project", "payee", "comments"]
+    fields = ["date", "description", "amount", "currency", "source", "category", "project", "payee", "comments"]
     template_name = "manage/form.html"
     success_url = reverse_lazy("polls:manage_transactions")
 
@@ -281,4 +416,17 @@ def landing(request):
 @login_required
 def profile(request):
     """Simple profile page showing username."""
-    return render(request, 'profile.html', {'user': request.user})
+    # Provide user's existing options server-side so the profile quick-add doesn't depend on JS timing
+    user = request.user
+    categories = Category.objects.filter(user=user).order_by('name').values_list('name', flat=True)
+    projects = Project.objects.filter(user=user).order_by('name').values_list('name', flat=True)
+    payees = Payee.objects.filter(user=user).order_by('name').values_list('name', flat=True)
+    sources = Source.objects.filter(user=user).order_by('name').values_list('name', flat=True)
+    context = {
+        'user': user,
+        'qa_categories': list(categories),
+        'qa_projects': list(projects),
+        'qa_payees': list(payees),
+        'qa_sources': list(sources),
+    }
+    return render(request, 'profile.html', context)

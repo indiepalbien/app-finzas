@@ -5,5 +5,251 @@
 {% block content %}
   <h1>Hola, {{ user.username }}</h1>
   <p>Esta es tu página de usuario.</p>
+
+  <!-- Quick-add compact form -->
+  <section id="quick-add" style="margin:1rem 0;padding:0.5rem;border:1px solid var(--accent);background:var(--muted);">
+    <form id="quick-add-form" action="{% url 'polls:quick_transaction' %}" method="post">
+      {% csrf_token %}
+      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+        <input name="description" id="qa-description" placeholder="Descripción*" required style="flex:2;min-width:160px">
+        <input name="amount" id="qa-amount" type="number" step="0.01" placeholder="Importe*" required style="width:120px">
+        <input name="date" id="qa-date" type="date" required style="width:150px">
+        <input name="currency" id="qa-currency" placeholder="EUR* / USD*" required style="width:90px;text-transform:uppercase">
+        <!-- Category: text input with server-rendered suggestions -->
+        <input name="category" id="qa-category" list="qa-categorys" placeholder="Categoría..." style="width:140px">
+        <datalist id="qa-categorys">
+          {% for name in qa_categories %}
+            <option value="{{ name }}">
+          {% endfor %}
+        </datalist>
+
+        <!-- Project: text input with server-rendered suggestions -->
+        <input name="project" id="qa-project" list="qa-projects" placeholder="Proyecto..." style="width:140px">
+        <datalist id="qa-projects">
+          {% for name in qa_projects %}
+            <option value="{{ name }}">
+          {% endfor %}
+        </datalist>
+
+        <!-- Payee: text input with server-rendered suggestions -->
+        <input name="payee" id="qa-payee" list="qa-payees" placeholder="Beneficiario..." style="width:160px">
+        <datalist id="qa-payees">
+          {% for name in qa_payees %}
+            <option value="{{ name }}">
+          {% endfor %}
+        </datalist>
+
+        <!-- Source: text input with server-rendered suggestions -->
+        <input name="source" id="qa-source" list="qa-sources" placeholder="Origen..." style="width:140px">
+        <datalist id="qa-sources">
+          {% for name in qa_sources %}
+            <option value="{{ name }}">
+          {% endfor %}
+        </datalist>
+        <button id="qa-submit" type="submit">Añadir</button>
+      </div>
+    </form>
+    <div id="qa-msg" aria-live="polite" style="margin-top:0.5rem;opacity:0;transition:opacity .2s">&nbsp;</div>
+  </section>
+
   <p><a href="{% url 'polls:manage_dashboard' %}">Gestionar mis datos</a></p>
+
+  <script>
+  (function(){
+    console.log('qa-init')
+    // helpers
+    function qs(sel){return document.querySelector(sel)}
+    function qsa(sel){return document.querySelectorAll(sel)}
+
+    const form = qs('#quick-add-form')
+    const msg = qs('#qa-msg')
+
+    // set default date to today
+    const dateInput = qs('#qa-date')
+    if(dateInput && !dateInput.value){
+      const d = new Date();
+      dateInput.value = d.toISOString().slice(0,10)
+    }
+
+    // Select options are rendered server-side on page load; no client fetch needed.
+
+    // Fallback visual dropdown when browser doesn't show datalist suggestions
+    function attachSuggestUI(inputSel, datalistSel){
+      const input = qs(inputSel)
+      const dl = qs(datalistSel)
+      if(!input || !dl) return
+
+      // create container
+      const box = document.createElement('div')
+      box.style.position = 'absolute'
+      // debug-friendly visible styles
+      box.style.background = '#ffffff'
+      box.style.border = '2px solid #ff2d6d'
+      box.style.padding = '4px'
+      box.style.display = 'none'
+      box.style.zIndex = '2147483647'
+      box.style.maxHeight = '220px'
+      box.style.overflow = 'auto'
+      box.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)'
+      box.className = 'qa-suggest-box'
+      // append as sibling to input to avoid global click/overlay issues
+      const parent = input.parentElement || input.closest('form') || document.body
+      // ensure parent is positioned so absolute box is relative to it
+      const parentPos = window.getComputedStyle(parent).position
+      if(!parentPos || parentPos === 'static') parent.style.position = 'relative'
+      parent.insertBefore(box, input.nextSibling)
+
+      function rebuild(){
+        box.innerHTML = ''
+        const opts = Array.from(dl.querySelectorAll('option')).map(o=>o.value)
+        // log for debugging
+        console.log('qa-datalist rebuild', inputSel, opts)
+        opts.forEach(val=>{
+          const it = document.createElement('div')
+          it.textContent = val
+          it.style.padding = '4px'
+          it.style.cursor = 'pointer'
+          // use pointerdown to avoid blur-before-click issues and dispatch input event after setting
+          it.addEventListener('pointerdown', function(ev){
+            input.value = val
+            input.dispatchEvent(new Event('input', {bubbles:true}))
+            hide()
+          })
+          box.appendChild(it)
+        })
+        // If the input is currently focused, show the box so new options are visible immediately
+        try{
+          if(document.activeElement === input && box.children.length){
+            show()
+          }
+        }catch(e){/* ignore */}
+      }
+
+      function show(){
+        console.log('qa-show', inputSel)
+        const rect = input.getBoundingClientRect()
+        // position relative to parent
+        const pRect = parent.getBoundingClientRect()
+        box.style.left = (rect.left - pRect.left) + 'px'
+        box.style.top = (rect.bottom - pRect.top) + 'px'
+        box.style.width = rect.width + 'px'
+        rebuild()
+        box.style.display = 'block'
+      }
+      function hide(){ console.log('qa-hide', inputSel); box.style.display = 'none' }
+
+      input.addEventListener('focus', ()=>{
+        // if there are options, show box
+        if(dl.querySelectorAll('option').length) show()
+      })
+      input.addEventListener('input', ()=>{
+        const q = input.value.toLowerCase()
+        Array.from(box.children).forEach(child=>{
+          child.style.display = child.textContent.toLowerCase().includes(q) ? 'block' : 'none'
+        })
+        if(box.children.length && box.style.display!=='block') show()
+      })
+      // hide when input loses focus (delay to allow pointerdown selection)
+      input.addEventListener('focusout', ()=>{
+        setTimeout(()=>{
+          if(document.activeElement !== input && !box.contains(document.activeElement)) hide()
+        }, 120)
+      })
+      // rebuild when datalist updates
+      const obs = new MutationObserver(rebuild)
+      obs.observe(dl, {childList:true})
+      console.log('qa-attachSuggestUI', inputSel, datalistSel)
+    }
+
+    // attach suggest UI to inputs
+    // old datalist-based fallback is no longer used; still keep attachSuggestUI safe
+    // attachSuggestUI('#qa-category','#qa-categories')
+    // attachSuggestUI('#qa-project','#qa-projects')
+    // attachSuggestUI('#qa-payee','#qa-payees')
+    // attachSuggestUI('#qa-source','#qa-sources')
+
+    // Debug helper: show datalist options and input values
+    function updateDebug(){
+      try{
+        const parts = []
+        ;['category','project','payee','source'].forEach(name=>{
+          const inp = qs('#qa-'+name)
+          const dl = qs('#qa-'+name+'s')
+          if(!inp) return
+          const opts = dl ? Array.from(dl.options).map(o=>({v:o.value,t:o.value})) : []
+          parts.push(name.toUpperCase()+": options:"+opts.length+" value:"+(inp.value||''))
+          parts.push(JSON.stringify(opts))
+        })
+        qs('#qa-debug').textContent = parts.join('\n')
+      }catch(e){ console.log('qa-debug err', e) }
+    }
+
+    // wire up text inputs to update debug on change
+    ;['category','project','payee','source'].forEach(name=>{
+      const inp = qs('#qa-'+name)
+      if(!inp) return
+      inp.addEventListener('input', updateDebug)
+      inp.addEventListener('change', updateDebug)
+    })
+
+    // submit handler (AJAX) — uses fetch and expects JSON
+    form.addEventListener('submit', async function(ev){
+      try{
+        if(!form) return
+        if(ev && typeof ev.preventDefault === 'function'){
+          ev.preventDefault()
+        } else if (window.event && typeof window.event.preventDefault === 'function'){
+          window.event.preventDefault()
+        }
+
+        const fd = new FormData(form)
+      // client-side currency normalization
+      const cur = (fd.get('currency')||'').toUpperCase().trim()
+      if(!/^[A-Z]{3}$/.test(cur)){
+        showMsg('Moneda inválida (3 letras).', true)
+        return
+      }
+      fd.set('currency', cur)
+
+      try{
+        const res = await fetch(form.action, {method:'POST', body:fd, credentials: 'same-origin', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}})
+        const contentType = res.headers.get('content-type') || ''
+        let json = null
+        if(contentType.includes('application/json')){
+          json = await res.json()
+        } else {
+          showMsg('Respuesta inesperada del servidor.', true)
+          return
+        }
+        if(res.ok && json.success){
+          form.reset()
+          // restore date to today
+          dateInput.value = new Date().toISOString().slice(0,10)
+          showMsg(json.message || 'Añadido', false)
+          // Note: options are server-rendered; reload page to see newly created items
+        }else{
+          const errs = (json && (json.errors || (json.message && [json.message]))) || ['Error']
+          showMsg(errs.join(' / '), true)
+        }
+      }catch(err){
+        console.error('quick-add submit error', err)
+        showMsg('Error enviando. Intentá de nuevo.', true)
+      }
+      }catch(err){
+        console.error('quick-add handler error', err)
+        showMsg('Error procesando formulario.', true)
+      }
+    })
+
+    // initial debug update so panel shows server-rendered values
+    updateDebug()
+
+    function showMsg(text, isError){
+      msg.textContent = text
+      msg.style.opacity = '1'
+      msg.style.color = isError ? 'var(--danger)' : 'var(--accent)'
+      setTimeout(()=>{ msg.style.opacity = '0' }, 1000)
+    }
+  })()
+  </script>
 {% endblock %}

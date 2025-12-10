@@ -9,6 +9,7 @@ Transaction
 - proj_id (link to projects)
 - commnets (texto)
 - payee_id (link to payee)
+- external_id (id en splitwise, etc)
 
 def to_usd() # returns the transaction amount to usd using most recent conversion value
 

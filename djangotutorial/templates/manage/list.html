@@ -3,6 +3,7 @@
 {% block title %}List — Manage{% endblock %}
 
 {% block content %}
+  <p><a href="javascript:history.back()">← Volver</a></p>
   <h1>{{ model_verbose_name_plural|capfirst }}</h1>
   <p><a href="{% url create_url_name %}">Añadir nuevo</a></p>
   <ul>

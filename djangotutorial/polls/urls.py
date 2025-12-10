@@ -37,4 +37,7 @@ urlpatterns = [
     path("manage/transactions/", views.TransactionListView.as_view(), name="manage_transactions"),
     path("manage/transactions/add/", views.TransactionCreateView.as_view(), name="manage_transaction_add"),
     path("manage/transactions/<int:pk>/edit/", views.TransactionUpdateView.as_view(), name="manage_transaction_edit"),
+    # Quick-add transaction (AJAX-friendly) and suggestion endpoints
+    path("quick-transaction/", views.quick_transaction, name="quick_transaction"),
+    path("suggest/<str:kind>/", views.suggest, name="suggest"),
 ]
