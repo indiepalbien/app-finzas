@@ -648,6 +648,7 @@ def profile(request):
     # Latest transactions (newest first) with related objects fetched to avoid N+1
     tx_qs = (
         Transaction.objects.filter(user=user)
+        .only('id', 'description', 'amount', 'currency', 'date', 'category_id', 'project_id', 'payee_id', 'source_id')
         .select_related('category', 'project', 'payee', 'source')
         .order_by('-date', '-id')
     )

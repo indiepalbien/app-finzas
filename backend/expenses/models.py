@@ -60,6 +60,9 @@ class Exchange(models.Model):
 
     class Meta:
         ordering = ["-date"]
+        indexes = [
+            models.Index(fields=["user", "source_currency", "target_currency", "date"], name="ex_user_src_tgt_date"),
+        ]
 
     def __str__(self):
         return f"{self.date} {self.source_currency}->{self.target_currency} @ {self.rate}"
@@ -152,6 +155,11 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.date} {self.amount} {self.currency}"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "date", "id"], name="tx_user_date_id"),
+        ]
 
     def to_usd(self):
         """Return amount converted to USD using the most recent Exchange for this user.
