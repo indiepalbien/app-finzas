@@ -6,6 +6,7 @@ app_name = "expenses"
 urlpatterns = [
     # Management dashboard and CRUD routes for finance models
     path("manage/", views.manage_dashboard, name="manage_dashboard"),
+    path("manage/categorizar/", views.categorize_transactions, name="categorize_transactions"),
     path("manage/categories/", views.CategoryListView.as_view(), name="manage_categories"),
     path("manage/categories/add/", views.CategoryCreateView.as_view(), name="manage_category_add"),
     path("manage/categories/<int:pk>/edit/", views.CategoryUpdateView.as_view(), name="manage_category_edit"),
@@ -54,6 +55,7 @@ urlpatterns = [
     path("bulk-add/parse/", views.bulk_parse_view, name="bulk_parse"),
     path("bulk-add/confirm/", views.bulk_confirm_view, name="bulk_confirm"),
 
+    path("manage/splitwise/", views.splitwise_status, name="splitwise_status"),
     path('splitwise/connect/', views.splitwise_connect, name='splitwise_connect'),
     path('splitwise/callback/', views.splitwise_callback, name='splitwise_callback'),
 ]

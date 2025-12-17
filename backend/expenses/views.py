@@ -5,7 +5,8 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.views import generic
 from django.urls import reverse
 from django.conf import settings
-from django.db.models import F
+from django.db.models import F, Q, OuterRef, Subquery, Value, DecimalField, ExpressionWrapper, Case, When, Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
@@ -13,6 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
+from urllib.parse import quote_plus
 from .models import Category, Project, Payee, Source, Exchange, Balance, Transaction, UserEmailMessage, UserEmailConfig, PendingTransaction, SplitwiseAccount, DefaultExchangeRate
 from . import forms
 from django.views.decorators.http import require_POST, require_GET
@@ -200,6 +202,7 @@ def suggest(request, kind):
 def manage_dashboard(request):
     """Simple management dashboard with links to each resource."""
     resources = [
+        ("Categorizar transacciones", "expenses:categorize_transactions"),
         ("Categories", "expenses:manage_categories"),
         ("Projects", "expenses:manage_projects"),
         ("Payees", "expenses:manage_payees"),
@@ -207,10 +210,70 @@ def manage_dashboard(request):
         ("Exchanges", "expenses:manage_exchanges"),
         ("Balances", "expenses:manage_balances"),
         ("Transactions", "expenses:manage_transactions"),
+        ("Splitwise", "expenses:splitwise_status"),
         ("Emails", "expenses:manage_emails"),
         ("Pending", "expenses:manage_pending_transactions"),
     ]
     return render(request, "manage/dashboard.html", {"resources": resources})
+
+
+@login_required
+def categorize_transactions(request):
+    """View to add categories and assign them to uncategorized transactions in one place."""
+    user = request.user
+
+    if request.method == "POST":
+        action = request.POST.get("action") or ""
+
+        if action == "add_category":
+            name = (request.POST.get("name") or "").strip()
+            if not name:
+                messages.error(request, "El nombre de la categoría es obligatorio.")
+                return redirect("expenses:categorize_transactions")
+
+            cat, created = Category.objects.get_or_create(user=user, name=name)
+            if created:
+                messages.success(request, f"Categoría '{cat.name}' creada.")
+            else:
+                messages.info(request, f"Ya existe la categoría '{cat.name}'.")
+            return redirect("expenses:categorize_transactions")
+
+        if action == "assign_tx":
+            tx_id = request.POST.get("tx_id")
+            category_id = request.POST.get("category_id")
+            comments = (request.POST.get("comments") or "").strip()
+
+            tx = get_object_or_404(Transaction, pk=tx_id, user=user)
+            category = None
+            if category_id:
+                category = get_object_or_404(Category, pk=category_id, user=user)
+
+            tx.category = category
+            tx.comments = comments
+            tx.save(update_fields=["category", "comments"])
+
+            messages.success(request, f"Transacción '{tx.description}' actualizada.")
+            return redirect(reverse("expenses:categorize_transactions") + f"#tx-{tx.id}")
+
+        messages.error(request, "Acción no reconocida.")
+        return redirect("expenses:categorize_transactions")
+
+    categories = Category.objects.filter(user=user).order_by("name")
+    uncategorized_qs = (
+        Transaction.objects.filter(user=user, category__isnull=True)
+        .select_related("source", "project", "payee")
+        .order_by("-date", "-id")
+    )
+
+    page_number = request.GET.get("page") or 1
+    paginator = Paginator(uncategorized_qs, 25)
+    tx_page = paginator.get_page(page_number)
+
+    context = {
+        "categories": categories,
+        "tx_page": tx_page,
+    }
+    return render(request, "manage/categorize.html", context)
 
 
 class OwnerRequiredMixin(UserPassesTestMixin):
@@ -582,8 +645,12 @@ def profile(request):
     projects = Project.objects.filter(user=user).order_by('name').values_list('name', flat=True)
     payees = Payee.objects.filter(user=user).order_by('name').values_list('name', flat=True)
     sources = Source.objects.filter(user=user).order_by('name').values_list('name', flat=True)
-    # Latest transactions (newest first) with pagination (5 per page)
-    tx_qs = Transaction.objects.filter(user=user).order_by('-date', '-id')
+    # Latest transactions (newest first) with related objects fetched to avoid N+1
+    tx_qs = (
+        Transaction.objects.filter(user=user)
+        .select_related('category', 'project', 'payee', 'source')
+        .order_by('-date', '-id')
+    )
     page_number = request.GET.get('page') or 1
     paginator = Paginator(tx_qs, 5)
     tx_page = paginator.get_page(page_number)
@@ -611,27 +678,70 @@ def profile(request):
     first_day = datetime.date(sel_year, sel_month, 1)
     ny, nm = next_month(sel_year, sel_month)
     next_first = datetime.date(ny, nm, 1)
-    month_qs = Transaction.objects.filter(user=user, date__gte=first_day, date__lt=next_first)
-    totals = {}
-    missing_rates = 0
-    for t in month_qs:
-        # Consider expenses only (positive amounts; quick-add typically uses positive for outflows)
-        if t.amount <= 0:
-            continue
-        usd = t.to_usd()
-        if usd is None:
-            missing_rates += 1
-            continue
-        key = t.category.name if t.category else 'Sin categoría'
-        totals[key] = totals.get(key, Decimal('0')) + usd
+    month_qs = Transaction.objects.filter(
+        user=user,
+        date__gte=first_day,
+        date__lt=next_first,
+        amount__gt=0,
+    )
+
+    # Annotate FX rates via subqueries (latest <= tx date)
+    rate_direct = Subquery(
+        Exchange.objects.filter(
+            user=user,
+            source_currency__iexact=OuterRef('currency'),
+            target_currency__iexact='USD',
+            date__lte=OuterRef('date'),
+        )
+        .order_by('-date')
+        .values('rate')[:1]
+    )
+    rate_inverse = Subquery(
+        Exchange.objects.filter(
+            user=user,
+            source_currency__iexact='USD',
+            target_currency__iexact=OuterRef('currency'),
+            date__lte=OuterRef('date'),
+        )
+        .order_by('-date')
+        .values('rate')[:1]
+    )
+    default_rate = Subquery(
+        DefaultExchangeRate.objects.filter(currency__iexact=OuterRef('currency'))
+        .values('rate')[:1]
+    )
+
+    annotated = month_qs.annotate(
+        rate_direct=rate_direct,
+        rate_inverse=rate_inverse,
+        rate_default=default_rate,
+    )
+
+    usd_amount = Case(
+        When(currency__iexact='USD', then=F('amount')),
+        When(rate_direct__isnull=False, then=ExpressionWrapper(F('amount') * F('rate_direct'), output_field=DecimalField(max_digits=20, decimal_places=8))),
+        When(rate_inverse__isnull=False, then=ExpressionWrapper(F('amount') / F('rate_inverse'), output_field=DecimalField(max_digits=20, decimal_places=8))),
+        When(rate_default__isnull=False, then=ExpressionWrapper(F('amount') / F('rate_default'), output_field=DecimalField(max_digits=20, decimal_places=8))),
+        default=Value(None),
+        output_field=DecimalField(max_digits=20, decimal_places=8),
+    )
+
+    annotated = annotated.annotate(usd_amount=usd_amount)
+    missing_rates = annotated.filter(usd_amount__isnull=True).count()
+
+    agg = (
+        annotated.filter(usd_amount__isnull=False)
+        .values(cat_name=Coalesce('category__name', Value('Sin categoría')))
+        .annotate(total_usd=Sum('usd_amount'))
+        .order_by('-total_usd')
+    )
     cat_expenses = [
         {
-            'name': k,
-            'total_usd': v,
+            'name': row['cat_name'],
+            'total_usd': row['total_usd'].quantize(Decimal('0.01')) if row['total_usd'] is not None else Decimal('0'),
         }
-        for k, v in totals.items()
+        for row in agg
     ]
-    cat_expenses.sort(key=lambda r: r['total_usd'], reverse=True)
     py, pm = prev_month(sel_year, sel_month)
     context_month = {
         'cat_expenses': cat_expenses,
@@ -935,3 +1045,15 @@ def splitwise_callback(request):
         account.raw = raw
     account.save()
     return redirect(request.GET.get('next') or '/')
+
+
+@login_required
+def splitwise_status(request):
+    """Display Splitwise connection status and offer connect action."""
+    account = SplitwiseAccount.objects.filter(user=request.user).first()
+    connected = bool(account and account.oauth_token and account.oauth_token_secret)
+    context = {
+        "account": account,
+        "connected": connected,
+    }
+    return render(request, "manage/splitwise.html", context)

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Categorizar transacciones{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'expenses:manage_dashboard' %}">← Volver al panel</a></p>
+<h1>Categorías y asignación rápida</h1>
+
+<section style="margin:1rem 0;padding:0.75rem;border:1px solid var(--accent);background:var(--panel);">
+  <h2 style="margin-top:0">Categorías existentes</h2>
+  <form action="" method="post" style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_category">
+    <input type="text" name="name" placeholder="Nueva categoría" required style="padding:0.45rem 0.6rem;flex:1 1 220px;">
+    <button type="submit">Añadir categoría</button>
+  </form>
+  <div style="margin-top:0.75rem">
+    {% if categories %}
+      <ul style="display:flex;flex-wrap:wrap;gap:0.35rem;padding:0;margin:0;list-style:none;">
+        {% for cat in categories %}
+          <li style="padding:0.25rem 0.5rem;border:1px solid var(--border);background:#fff;border-radius:4px;">{{ cat.name }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p style="margin:0.25rem 0 0 0;">No hay categorías todavía.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section style="margin:1rem 0;padding:0.75rem;border:1px solid var(--accent);background:var(--panel);">
+  <h2 style="margin-top:0">Transacciones sin categoría</h2>
+  {% if tx_page and tx_page.object_list %}
+    <p style="margin-top:0;color:var(--muted);">Mostrando {{ tx_page.object_list|length }} de {{ tx_page.paginator.count }} pendientes.</p>
+    <div style="display:grid;grid-template-columns:1fr;gap:0.75rem;">
+      {% for tx in tx_page %}
+        <form id="tx-{{ tx.id }}" action="" method="post" style="padding:0.6rem;border:1px solid var(--border);background:#fff;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="assign_tx">
+          <input type="hidden" name="tx_id" value="{{ tx.id }}">
+          <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;">
+            <div style="flex:2 1 240px;">
+              <strong>{{ tx.description }}</strong>
+              <div style="font-size:0.9rem;color:var(--muted);">{{ tx.date }} · {{ tx.currency }} {{ tx.amount }}</div>
+              {% if tx.source %}<div style="font-size:0.9rem;color:var(--muted);">Origen: {{ tx.source.name }}</div>{% endif %}
+              {% if tx.project %}<div style="font-size:0.9rem;color:var(--muted);">Proyecto: {{ tx.project.name }}</div>{% endif %}
+              {% if tx.payee %}<div style="font-size:0.9rem;color:var(--muted);">Beneficiario: {{ tx.payee.name }}</div>{% endif %}
+            </div>
+            <div style="flex:1 1 180px;min-width:180px;">
+              <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Categoría</label>
+              <select name="category_id" style="width:100%;padding:0.45rem 0.55rem;">
+                <option value="">Sin categoría</option>
+                {% for cat in categories %}
+                  <option value="{{ cat.id }}" {% if tx.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div style="flex:1 1 220px;min-width:220px;">
+              <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Comentario</label>
+              <textarea name="comments" rows="2" style="width:100%;padding:0.45rem 0.55rem;">{{ tx.comments }}</textarea>
+            </div>
+            <div style="flex:0 0 auto;align-self:flex-end;">
+              <button type="submit">Guardar</button>
+            </div>
+          </div>
+        </form>
+      {% endfor %}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;">
+      <div>
+        {% if tx_page.has_previous %}
+          <a href="?page={{ tx_page.previous_page_number }}">« Anterior</a>
+        {% endif %}
+      </div>
+      <div>
+        {% if tx_page.has_next %}
+          <a href="?page={{ tx_page.next_page_number }}">Siguiente »</a>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <p style="margin:0">No hay transacciones sin categoría. 🎉</p>
+  {% endif %}
+</section>
+{% endblock %}
