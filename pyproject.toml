@@ -15,4 +15,5 @@ dependencies = [
     "redis==5.0.8",
     "mail-parser>=4.1.4",
     "whitenoise>=6.11.0",
+    "django-axes>=6.0.0",
 ]

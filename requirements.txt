@@ -14,3 +14,4 @@ whitenoise==6.11.0
 celery==5.4.0
 redis==5.0.8
 mail-parser==4.1.4
+django-axes==6.4.0

@@ -14,11 +14,14 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import os
 from django.contrib import admin
 from django.urls import path, include
 from expenses import views as expenses_views
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import TemplateView
+from django.http import HttpResponse
 
 urlpatterns = [
     path('', expenses_views.landing, name='landing'),
@@ -26,7 +29,14 @@ urlpatterns = [
     path('expenses/', include('expenses.urls')),
     path('accounts/register/', expenses_views.register, name='register'),
     path('accounts/', include('django.contrib.auth.urls')),
-    path('admin/', admin.site.urls),
+    # Serve a minimal robots.txt to avoid 404 noise
+    path('robots.txt', TemplateView.as_view(
+        template_name='robots.txt', content_type='text/plain'
+    ), name='robots_txt'),
+    # Return 204 for missing favicon to cut noise if none provided
+    path('favicon.ico', lambda request: HttpResponse(status=204)),
+    # Admin under configurable path (default: 'admin')
+    path(f"{settings.ADMIN_URL}/", admin.site.urls),
 ]
 
 # Serve static files in development

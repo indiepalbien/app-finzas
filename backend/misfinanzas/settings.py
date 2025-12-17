@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 from celery.schedules import crontab
@@ -36,7 +37,9 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-+^p_y(@#%!(*c-
 USE_POSTGRES = os.environ.get('USE_POSTGRES', 'False') == 'True'
 DEBUG = os.environ.get('DEBUG', str(not USE_POSTGRES)) == 'True'
 
-ALLOWED_HOSTS = ['*']
+# Hosts
+# Prefer explicit hosts in prod. You can override via env `ALLOWED_HOSTS` (comma-separated)
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'cachinapp.com,.railway.app,localhost,127.0.0.1').split(',') if h.strip()]
 
 # CSRF trusted origins for Railway deployment
 CSRF_TRUSTED_ORIGINS = [
@@ -49,6 +52,7 @@ CSRF_TRUSTED_ORIGINS = [
 
 INSTALLED_APPS = [
     "expenses.apps.ExpensesConfig",
+    'axes',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -60,10 +64,13 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'misfinanzas.middleware.BlockMaliciousRequestsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'misfinanzas.middleware.VaryOnCookieMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -164,6 +171,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Admin URL (change from default in production to reduce noise)
+ADMIN_URL = os.environ.get('ADMIN_URL', 'admin')
+
 # Email fetch settings (IMAP)
 EMAIL_FETCH_IMAP_HOST = os.environ.get('EMAIL_FETCH_IMAP_HOST', 'imap.cachinapp.com')
 EMAIL_FETCH_IMAP_PORT = int(os.environ.get('EMAIL_FETCH_IMAP_PORT', '993'))
@@ -192,10 +202,20 @@ LOGGING = {
             'format': '%(asctime)s %(levelname)s %(name)s: %(message)s'
         },
     },
+    'filters': {
+        'ignore_common_404': {
+            '()': 'misfinanzas.logging_filters.IgnoreCommon404',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
+        },
+        'console_404filtered': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'filters': ['ignore_common_404'],
         },
     },
     'loggers': {
@@ -204,9 +224,42 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'django.request': {
+            'handlers': ['console_404filtered'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
     },
     'root': {
         'handlers': ['console'],
         'level': os.environ.get('DJANGO_LOG_LEVEL', 'WARNING'),
     },
 }
+
+# Security hardening for production
+if USE_POSTGRES and not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True') == 'True'
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False') == 'True'
+    SECURE_HSTS_PRELOAD = os.environ.get('SECURE_HSTS_PRELOAD', 'False') == 'True'
+    SECURE_REFERRER_POLICY = os.environ.get('SECURE_REFERRER_POLICY', 'same-origin')
+    X_FRAME_OPTIONS = 'DENY'
+
+# Authentication backends (Axes for rate limiting and lockout)
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# django-axes configuration
+AXES_ENABLED = os.environ.get('AXES_ENABLED', 'True' if (USE_POSTGRES and not DEBUG) else 'False') == 'True'
+AXES_FAILURE_LIMIT = int(os.environ.get('AXES_FAILURE_LIMIT', '5'))
+AXES_COOLOFF_TIME = timedelta(hours=int(os.environ.get('AXES_COOLOFF_HOURS', '1')))
+AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True
+AXES_RESET_ON_SUCCESS = True
+AXES_ONLY_USER_FAILURES = False
+AXES_ONLY_IPV4 = True
+AXES_USE_USER_AGENT = True
