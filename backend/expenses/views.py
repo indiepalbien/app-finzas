@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
-from .models import Category, Project, Payee, Source, Exchange, Balance, Transaction, UserEmailMessage, UserEmailConfig, PendingTransaction, SplitwiseAccount
+from .models import Category, Project, Payee, Source, Exchange, Balance, Transaction, UserEmailMessage, UserEmailConfig, PendingTransaction, SplitwiseAccount, DefaultExchangeRate
 from . import forms
 from django.views.decorators.http import require_POST, require_GET
 from django.utils import timezone as dj_timezone
@@ -25,6 +25,41 @@ from django.core.paginator import Paginator
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def get_exchange_rate(user, source_currency, target_currency, date):
+    """
+    Get exchange rate from source_currency to target_currency.
+    
+    First tries user-specified rates (Exchange model), then falls back to default rates.
+    Returns Decimal or None if not found.
+    """
+    if source_currency.upper() == target_currency.upper():
+        return Decimal('1')
+    
+    # Try user-specified rate first
+    user_rate_qs = Exchange.objects.filter(
+        user=user,
+        source_currency__iexact=source_currency,
+        target_currency__iexact=target_currency,
+        date__lte=date,
+    ).order_by('-date')
+    
+    if user_rate_qs.exists():
+        return user_rate_qs.first().rate
+    
+    # Fall back to default rates
+    # For now, assume target_currency is USD
+    try:
+        source_rate = DefaultExchangeRate.objects.get(currency__iexact=source_currency)
+        target_rate = DefaultExchangeRate.objects.get(currency__iexact=target_currency)
+        
+        if target_rate.rate != 0:
+            return source_rate.rate / target_rate.rate
+    except DefaultExchangeRate.DoesNotExist:
+        pass
+    
+    return None
 
 @login_required
 @require_POST
@@ -114,7 +149,7 @@ def quick_transaction(request):
             user=user,
             date=tx_date,
             description=description,
-            amount=amount_in_usd,
+            amount=amount_dec,
             currency=currency,
             source=source,
             category=category,

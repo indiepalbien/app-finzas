@@ -2,6 +2,61 @@ import logging
 from datetime import datetime
 
 from celery import shared_task
+from django.conf import settings
+import requests
+from decimal import Decimal
+from .models import DefaultExchangeRate
+import logging
+
+logger = logging.getLogger(__name__)
+
+# List of common currencies for Latin America, Europe, and North America
+COMMON_CURRENCIES = [
+    # North America
+    'USD', 'CAD', 'MXN',
+    # Latin America
+    'UYU', 'ARS', 'BRL', 'CLP', 'COP', 'PEN', 'VES', 'PYG',
+    # Europe
+    'EUR', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN',
+]
+
+@shared_task
+def update_exchange_rates():
+    """Fetch exchange rates from openexchangerates.org and update defaults."""
+    api_key = settings.OPENEXCHANGERATES_API_KEY
+    if not api_key:
+        logger.error("OPENEXCHANGERATES_API_KEY not configured")
+        return
+    
+    try:
+        url = f'https://openexchangerates.org/api/latest.json?app_id={api_key}&base=USD'
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if 'rates' not in data:
+            logger.error(f"Invalid response from openexchangerates: {data}")
+            return
+        
+        rates = data['rates']
+        updated_count = 0
+        
+        for currency in COMMON_CURRENCIES:
+            if currency in rates:
+                rate = Decimal(str(rates[currency]))
+                obj, created = DefaultExchangeRate.objects.update_or_create(
+                    currency=currency,
+                    defaults={'rate': rate}
+                )
+                updated_count += 1
+                logger.info(f"Updated {currency}: {rate}")
+        
+        logger.info(f"Successfully updated {updated_count} exchange rates")
+        
+    except requests.RequestException as e:
+        logger.error(f"Error fetching exchange rates: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error updating exchange rates: {e}")
 from django.core.management import call_command
 
 from expenses.email_ingest import process_new_messages

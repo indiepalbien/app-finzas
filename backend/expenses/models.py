@@ -37,6 +37,19 @@ class Source(models.Model):
         return self.name
 
 
+class DefaultExchangeRate(models.Model):
+    """Default exchange rates fetched from openexchangerates.org, updated weekly."""
+    currency = models.CharField(max_length=3, unique=True, db_index=True)
+    rate = models.DecimalField(max_digits=20, decimal_places=8)  # rate per 1 USD
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["currency"]
+
+    def __str__(self):
+        return f"{self.currency}: {self.rate} per USD (updated {self.last_updated})"
+
+
 class Exchange(models.Model):
     """Exchange rate record: rate = target_currency per 1 source_currency."""
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

@@ -181,6 +181,9 @@ EMAIL_FETCH_IMAP_SSL = os.environ.get('EMAIL_FETCH_IMAP_SSL', 'True') == 'True'
 EMAIL_FETCH_USER = os.environ.get('EMAIL_FETCH_USER')  # optional shared mailbox user
 EMAIL_FETCH_PASS = os.environ.get('EMAIL_FETCH_PASS')  # optional shared mailbox password
 
+# Open Exchange Rates API
+OPENEXCHANGERATES_API_KEY = os.environ.get('OPENEXCHANGERATES_API_KEY')
+
 # Celery / Celery Beat
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/1')
@@ -194,6 +197,10 @@ CELERY_BEAT_SCHEDULE = {
     'sync-splitwise-every-10m': {
         'task': 'expenses.tasks.sync_all_splitwise',
         'schedule': crontab(minute='*/5'),  # every 5 minutes
+    },
+    'update-exchange-rates-weekly': {
+        'task': 'expenses.tasks.update_exchange_rates',
+        'schedule': crontab(hour=0, minute=0, day_of_week=0),  # Every Sunday at midnight
     },
 }
 
