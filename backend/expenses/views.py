@@ -697,61 +697,7 @@ def profile(request):
     paginator = Paginator(tx_qs, 5)
     tx_page = paginator.get_page(page_number)
 
-    # Monthly expenses by category in USD (current or previous month)
-    today = datetime.date.today()
-    current_year, current_month = today.year, today.month
-    def month_str(y, m):
-        return f"{y:04d}-{m:02d}"
-    def prev_month(y, m):
-        return (y-1, 12) if m == 1 else (y, m-1)
-    def next_month(y, m):
-        return (y+1, 1) if m == 12 else (y, m+1)
-    selected_m = request.GET.get('m')
-    sel_year, sel_month = current_year, current_month
-    if selected_m:
-        try:
-            parts = selected_m.split('-')
-            y = int(parts[0]); m = int(parts[1])
-            if 1 <= m <= 12:
-                sel_year, sel_month = y, m
-        except Exception:
-            sel_year, sel_month = current_year, current_month
-    # Range: [first day of selected month, first day of next month)
-    first_day = datetime.date(sel_year, sel_month, 1)
-    ny, nm = next_month(sel_year, sel_month)
-    next_first = datetime.date(ny, nm, 1)
-    month_qs = Transaction.objects.filter(
-        user=user,
-        date__gte=first_day,
-        date__lt=next_first,
-        amount__gt=0,
-    )
-
-    # Annotate FX rates via subqueries (latest <= tx date)
-    # Use pre-calculated amount_usd field for performance
-    missing_rates = month_qs.filter(amount_usd__isnull=True).count()
-
-    agg = (
-        month_qs.filter(amount_usd__isnull=False)
-        .values(cat_name=Coalesce('category__name', Value('Sin categoría')))
-        .annotate(total_usd=Sum('amount_usd'))
-        .order_by('-total_usd')
-    )
-    cat_expenses = [
-        {
-            'name': row['cat_name'],
-            'total_usd': row['total_usd'].quantize(Decimal('0.01')) if row['total_usd'] is not None else Decimal('0'),
-        }
-        for row in agg
-    ]
-    py, pm = prev_month(sel_year, sel_month)
-    context_month = {
-        'cat_expenses': cat_expenses,
-        'selected_month_str': month_str(sel_year, sel_month),
-        'm_current': month_str(current_year, current_month),
-        'm_prev': month_str(py, pm),
-        'exp_missing_rates': missing_rates,
-    }
+    # Category expenses now loaded independently via AJAX (api_category_expenses endpoint)
     context = {
         'user': user,
         'qa_categories': list(categories),
@@ -760,7 +706,6 @@ def profile(request):
         'qa_sources': list(sources),
         'tx_page': tx_page,
         'tx_paginator': paginator,
-        **context_month,
     }
     return render(request, 'profile.html', context)
 
@@ -1116,45 +1061,75 @@ def api_recent_transactions(request):
 @login_required
 @require_GET
 def api_category_expenses(request):
-    """API endpoint: Return category expenses for a month as JSON for async loading."""
+    """API endpoint: Return category expenses by currency for a month as JSON."""
     user = request.user
+
+    # Helper functions for month handling
+    def month_str(y, m):
+        return f"{y:04d}-{m:02d}"
+
+    def prev_month(y, m):
+        return (y - 1, 12) if m == 1 else (y, m - 1)
+
+    def next_month(y, m):
+        return (y + 1, 1) if m == 12 else (y, m + 1)
+
+    # Parse month parameter
+    today = datetime.date.today()
+    current_year, current_month = today.year, today.month
     m_param = request.GET.get('m', '')
-    
-    current_year, current_month = current_month_tuple()
-    sel_year, sel_month = parse_month_str(m_param, default_year=current_year, default_month=current_month)
-    
+    sel_year, sel_month = current_year, current_month
+
+    if m_param:
+        try:
+            parts = m_param.split('-')
+            y = int(parts[0])
+            m = int(parts[1])
+            if 1 <= m <= 12:
+                sel_year, sel_month = y, m
+        except Exception:
+            pass
+
+    # Get transactions for selected month
+    first_day = datetime.date(sel_year, sel_month, 1)
+    ny, nm = next_month(sel_year, sel_month)
+    next_first = datetime.date(ny, nm, 1)
+
     month_qs = Transaction.objects.filter(
         user=user,
-        date__year=sel_year,
-        date__month=sel_month,
+        date__gte=first_day,
+        date__lt=next_first,
+        amount__gt=0,
     )
-    
-    # Use pre-calculated amount_usd field
-    missing_rates = month_qs.filter(amount_usd__isnull=True).count()
-    
+
+    # Aggregate by category AND currency (no USD conversion)
     agg = (
-        month_qs.filter(amount_usd__isnull=False)
-        .values(cat_name=Coalesce('category__name', Value('Sin categoría')))
-        .annotate(total_usd=Sum('amount_usd'))
-        .order_by('-total_usd')
+        month_qs
+        .values(
+            cat_name=Coalesce('category__name', Value('Sin categoría')),
+            currency=F('currency')
+        )
+        .annotate(total=Sum('amount'))
+        .order_by('cat_name', 'currency')
     )
-    
+
+    # Format results
     cat_expenses = [
         {
-            'name': row['cat_name'],
-            'total_usd': str(row['total_usd'].quantize(Decimal('0.01'))) if row['total_usd'] else '0.00',
+            'category': row['cat_name'],
+            'currency': row['currency'],
+            'total': str(row['total'].quantize(Decimal('0.01'))) if row['total'] else '0.00',
         }
         for row in agg
     ]
-    
+
     py, pm = prev_month(sel_year, sel_month)
-    
+
     return JsonResponse({
         'cat_expenses': cat_expenses,
         'selected_month_str': month_str(sel_year, sel_month),
         'm_current': month_str(current_year, current_month),
         'm_prev': month_str(py, pm),
-        'missing_rates': missing_rates,
     })
 
 

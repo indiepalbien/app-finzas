@@ -137,40 +137,105 @@
     {% endif %}
   </section>
 
-  <!-- Gastos por categoría (USD) con selector de mes -->
+  <!-- Gastos por categoría con carga independiente -->
   <section id="category-expenses" style="margin:1rem 0;padding:0.5rem;border:1px solid var(--accent);background:var(--panel);">
     <h2 style="margin:0 0 .5rem 0">Gastos por categoría</h2>
-    <div style="text-align:center;margin:.25rem 0 .5rem 0">
-      <a href="?m={{ m_prev }}">« Mes anterior</a>
-      <span style="margin:0 .75rem">Mes {{ selected_month_str }}</span>
-      {% if m_current != selected_month_str %}
-        <a href="?m={{ m_current }}">Mes actual »</a>
-      {% endif %}
+    <div id="cat-month-nav" style="text-align:center;margin:.25rem 0 .5rem 0">
+      <a href="#" data-action="prev">« Mes anterior</a>
+      <span id="cat-month-label" style="margin:0 .75rem">Cargando...</span>
+      <a href="#" data-action="current" style="display:none">Mes actual »</a>
     </div>
-    {% if exp_missing_rates and exp_missing_rates > 0 %}
-      <div class="message" style="background:#fff4f4">Faltan {{ exp_missing_rates }} tasas de cambio para convertir algunas transacciones.</div>
-    {% endif %}
-    <table style="width:100%;border-collapse:collapse">
-      <thead>
-        <tr>
-          <th style="text-align:left;border-bottom:2px solid var(--border);padding:.25rem 0">Categoría</th>
-          <th style="text-align:right;border-bottom:2px solid var(--border);padding:.25rem 0">Gasto (USD)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in cat_expenses %}
-          <tr>
-            <td style="padding:.3rem 0;border-bottom:1px dashed var(--border)">{{ row.name }}</td>
-            <td style="padding:.3rem 0;text-align:right;border-bottom:1px dashed var(--border)">$ {{ row.total_usd }}</td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="2" style="padding:.3rem 0">Sin gastos en este mes.</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div id="cat-expenses-content">
+      <p style="text-align:center;color:#999">Cargando gastos...</p>
+    </div>
   </section>
+
+  <script>
+  (function() {
+    let currentMonth = null;
+    let currentMonthStr = null;
+
+    async function loadCategoryExpenses(month) {
+      const content = document.getElementById('cat-expenses-content');
+      const label = document.getElementById('cat-month-label');
+      const nav = document.getElementById('cat-month-nav');
+
+      // Show loading
+      content.innerHTML = '<p style="text-align:center;color:#999">Cargando...</p>';
+
+      try {
+        const url = month ? `/expenses/api/category-expenses/?m=${month}` : '/expenses/api/category-expenses/';
+        const response = await fetch(url);
+
+        if (!response.ok) throw new Error('Error al cargar');
+
+        const data = await response.json();
+
+        // Update current state
+        currentMonth = data.selected_month_str;
+        currentMonthStr = data.m_current;
+
+        // Update month label
+        label.textContent = `Mes ${data.selected_month_str}`;
+
+        // Show/hide "current month" link
+        const currentLink = nav.querySelector('[data-action="current"]');
+        if (data.selected_month_str !== data.m_current) {
+          currentLink.style.display = 'inline';
+        } else {
+          currentLink.style.display = 'none';
+        }
+
+        // Render table
+        if (data.cat_expenses && data.cat_expenses.length > 0) {
+          let html = '<table style="width:100%;border-collapse:collapse"><thead><tr>';
+          html += '<th style="text-align:left;border-bottom:2px solid var(--border);padding:.25rem 0">Categoría</th>';
+          html += '<th style="text-align:center;border-bottom:2px solid var(--border);padding:.25rem 0">Moneda</th>';
+          html += '<th style="text-align:right;border-bottom:2px solid var(--border);padding:.25rem 0">Total</th>';
+          html += '</tr></thead><tbody>';
+
+          data.cat_expenses.forEach(row => {
+            html += '<tr>';
+            html += `<td style="padding:.3rem 0;border-bottom:1px dashed var(--border)">${row.category}</td>`;
+            html += `<td style="padding:.3rem 0;text-align:center;border-bottom:1px dashed var(--border)">${row.currency}</td>`;
+            html += `<td style="padding:.3rem 0;text-align:right;border-bottom:1px dashed var(--border)">${row.total}</td>`;
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+          content.innerHTML = html;
+        } else {
+          content.innerHTML = '<p style="padding:.3rem 0">Sin gastos en este mes.</p>';
+        }
+      } catch (error) {
+        console.error('Error loading category expenses:', error);
+        content.innerHTML = '<p style="color:#d00">Error al cargar gastos. Refresca la página.</p>';
+      }
+    }
+
+    // Handle navigation clicks
+    document.getElementById('cat-month-nav').addEventListener('click', (e) => {
+      if (e.target.tagName === 'A') {
+        e.preventDefault();
+        const action = e.target.getAttribute('data-action');
+
+        if (action === 'prev') {
+          // Calculate previous month
+          const [y, m] = currentMonth.split('-').map(Number);
+          const prevY = m === 1 ? y - 1 : y;
+          const prevM = m === 1 ? 12 : m - 1;
+          const prevMonth = `${prevY.toString().padStart(4, '0')}-${prevM.toString().padStart(2, '0')}`;
+          loadCategoryExpenses(prevMonth);
+        } else if (action === 'current') {
+          loadCategoryExpenses(currentMonthStr);
+        }
+      }
+    });
+
+    // Initial load
+    loadCategoryExpenses();
+  })();
+  </script>
 
   <script>
   (function(){
