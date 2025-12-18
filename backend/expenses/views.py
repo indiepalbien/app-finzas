@@ -1298,10 +1298,10 @@ def get_category_expenses(user, month_qs, convert_to_usd=False):
                 missing_rates_count += 1
                 continue
 
-            # Add to category total
+            # Add to category total (use absolute value)
             if cat_name not in category_totals:
                 category_totals[cat_name] = Decimal('0')
-            category_totals[cat_name] += amount_usd
+            category_totals[cat_name] += abs(amount_usd)
 
         # Convert to list format sorted by total descending
         cat_expenses = [
@@ -1316,24 +1316,28 @@ def get_category_expenses(user, month_qs, convert_to_usd=False):
         return cat_expenses, missing_rates_count
 
     else:
-        # Group by category AND currency (no conversion)
-        agg = (
-            month_qs
-            .values(
-                'currency',
-                cat_name=Coalesce('category__name', Value('Sin categoría'))
-            )
-            .annotate(total=Sum('amount'))
-            .order_by('cat_name', 'currency')
-        )
+        # Group by category AND currency (using absolute values)
+        category_currency_totals = {}
+        transactions = month_qs.select_related('category')
 
+        for tx in transactions:
+            cat_name = tx.category.name if tx.category else 'Sin categoría'
+            currency = tx.currency
+            key = (cat_name, currency)
+
+            if key not in category_currency_totals:
+                category_currency_totals[key] = Decimal('0')
+            # Use absolute value to include both income and expenses
+            category_currency_totals[key] += abs(tx.amount)
+
+        # Sort by category name, then currency
         cat_expenses = [
             {
-                'category': row['cat_name'],
-                'currency': row['currency'],
-                'total': str(row['total'].quantize(Decimal('0.01'))) if row['total'] else '0.00',
+                'category': cat_name,
+                'currency': currency,
+                'total': str(total.quantize(Decimal('0.01'))),
             }
-            for row in agg
+            for (cat_name, currency), total in sorted(category_currency_totals.items())
         ]
 
         return cat_expenses, 0
@@ -1383,12 +1387,12 @@ def api_category_expenses(request):
     ny, nm = next_month(sel_year, sel_month)
     next_first = datetime.date(ny, nm, 1)
 
+    # Include all non-zero transactions (use absolute values in aggregation)
     month_qs = Transaction.objects.filter(
         user=user,
         date__gte=first_day,
         date__lt=next_first,
-        amount__gt=0,
-    )
+    ).exclude(amount=0)
 
     # Use helper function to calculate expenses
     cat_expenses, missing_rates = get_category_expenses(user, month_qs, convert_to_usd)
@@ -1418,11 +1422,11 @@ def api_project_expenses(request):
     except UserPreferences.DoesNotExist:
         convert_to_usd = False
 
-    # Get all transactions with amount > 0 AND with a project (filter out null projects)
-    all_txs = Transaction.objects.filter(user=user, amount__gt=0, project__isnull=False)
+    # Get all transactions with a project (filter out null projects, include both income/expenses)
+    all_txs = Transaction.objects.filter(user=user, project__isnull=False).exclude(amount=0)
 
     if convert_to_usd:
-        # Convert to USD and group by project
+        # Convert to USD and group by project (using absolute values)
         project_totals = {}
         missing_rates_count = 0
         transactions = all_txs.select_related('project')
@@ -1437,7 +1441,7 @@ def api_project_expenses(request):
 
             if proj_name not in project_totals:
                 project_totals[proj_name] = Decimal('0')
-            project_totals[proj_name] += amount_usd
+            project_totals[proj_name] += abs(amount_usd)
 
         proj_expenses = [
             {
@@ -1449,21 +1453,28 @@ def api_project_expenses(request):
         ]
         missing_rates = missing_rates_count
     else:
-        # Group by project AND currency
-        agg = (
-            all_txs
-            .values('currency', 'project__name')
-            .annotate(total=Sum('amount'))
-            .order_by('project__name', 'currency')
-        )
+        # Group by project AND currency (using absolute values)
+        project_currency_totals = {}
+        transactions = all_txs.select_related('project')
 
+        for tx in transactions:
+            proj_name = tx.project.name
+            currency = tx.currency
+            key = (proj_name, currency)
+
+            if key not in project_currency_totals:
+                project_currency_totals[key] = Decimal('0')
+            # Use absolute value to include both income and expenses
+            project_currency_totals[key] += abs(tx.amount)
+
+        # Sort by project name, then currency
         proj_expenses = [
             {
-                'project': row['project__name'],
-                'currency': row['currency'],
-                'total': str(row['total'].quantize(Decimal('0.01'))) if row['total'] else '0.00',
+                'project': proj_name,
+                'currency': currency,
+                'total': str(total.quantize(Decimal('0.01'))),
             }
-            for row in agg
+            for (proj_name, currency), total in sorted(project_currency_totals.items())
         ]
         missing_rates = 0
 
