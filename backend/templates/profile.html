@@ -124,13 +124,70 @@
         </div>
       </div>
       <div style="text-align:center;margin-top:.25rem">
-        {% for num in tx_page.paginator.page_range %}
-          {% if num == tx_page.number %}
-            <span style="font-weight:700;border-bottom:2px solid var(--accent);padding:0 .25rem">{{ num }}</span>
+        {% if tx_page.paginator.num_pages <= 7 %}
+          {# Show all pages if 7 or fewer #}
+          {% for num in tx_page.paginator.page_range %}
+            {% if num == tx_page.number %}
+              <span style="font-weight:700;border-bottom:2px solid var(--accent);padding:0 .25rem">{{ num }}</span>
+            {% else %}
+              <a href="?page={{ num }}" style="padding:0 .25rem">{{ num }}</a>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          {# Smart pagination for many pages #}
+          {% if tx_page.number <= 4 %}
+            {# Near start: 1 2 3 4 5 ... last #}
+            {% for num in tx_page.paginator.page_range %}
+              {% if num <= 5 or num == tx_page.paginator.num_pages %}
+                {% if num == tx_page.number %}
+                  <span style="font-weight:700;border-bottom:2px solid var(--accent);padding:0 .25rem">{{ num }}</span>
+                {% else %}
+                  <a href="?page={{ num }}" style="padding:0 .25rem">{{ num }}</a>
+                {% endif %}
+                {% if num == 5 and tx_page.paginator.num_pages > 6 %}
+                  <span style="padding:0 .25rem">...</span>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% elif tx_page.number >= tx_page.paginator.num_pages|add:"-3" %}
+            {# Near end: 1 ... 22 23 24 25 26 #}
+            {% for num in tx_page.paginator.page_range %}
+              {% if num == 1 or num >= tx_page.paginator.num_pages|add:"-4" %}
+                {% if num == 1 %}
+                  <a href="?page={{ num }}" style="padding:0 .25rem">{{ num }}</a>
+                  {% if tx_page.paginator.num_pages > 6 %}
+                    <span style="padding:0 .25rem">...</span>
+                  {% endif %}
+                {% else %}
+                  {% if num == tx_page.number %}
+                    <span style="font-weight:700;border-bottom:2px solid var(--accent);padding:0 .25rem">{{ num }}</span>
+                  {% else %}
+                    <a href="?page={{ num }}" style="padding:0 .25rem">{{ num }}</a>
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
           {% else %}
-            <a href="?page={{ num }}" style="padding:0 .25rem">{{ num }}</a>
+            {# In middle: 1 ... 10 11 12 ... 26 #}
+            {% for num in tx_page.paginator.page_range %}
+              {% if num == 1 or num == tx_page.paginator.num_pages or num >= tx_page.number|add:"-1" and num <= tx_page.number|add:"1" %}
+                {% if num == 1 %}
+                  <a href="?page={{ num }}" style="padding:0 .25rem">{{ num }}</a>
+                  <span style="padding:0 .25rem">...</span>
+                {% elif num == tx_page.paginator.num_pages %}
+                  <span style="padding:0 .25rem">...</span>
+                  <a href="?page={{ num }}" style="padding:0 .25rem">{{ num }}</a>
+                {% else %}
+                  {% if num == tx_page.number %}
+                    <span style="font-weight:700;border-bottom:2px solid var(--accent);padding:0 .25rem">{{ num }}</span>
+                  {% else %}
+                    <a href="?page={{ num }}" style="padding:0 .25rem">{{ num }}</a>
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
           {% endif %}
-        {% endfor %}
+        {% endif %}
       </div>
     {% else %}
       <p style="margin:0">Aún no hay transacciones.</p>
