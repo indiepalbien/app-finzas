@@ -1116,24 +1116,53 @@ def api_category_expenses(request):
     )
 
     if convert_to_usd:
-        # Aggregate by category only, sum amount_usd
-        agg = (
-            month_qs
-            .filter(amount_usd__isnull=False)
-            .values(cat_name=Coalesce('category__name', Value('Sin categoría')))
-            .annotate(total=Sum('amount_usd'))
-            .order_by('-total')
-        )
+        # Fetch all transactions and convert to USD on-the-fly
+        transactions = month_qs.select_related('category')
 
+        # Group by category and sum converted amounts
+        category_totals = {}
+        missing_rates_count = 0
+
+        for tx in transactions:
+            cat_name = tx.category.name if tx.category else 'Sin categoría'
+
+            # Convert to USD using current exchange rate
+            if tx.currency.upper() == 'USD':
+                amount_usd = tx.amount
+            else:
+                # Get exchange rate for this transaction's date
+                rate = get_exchange_rate(user, tx.currency, 'USD', tx.date)
+                if rate:
+                    amount_usd = tx.amount * rate
+                else:
+                    # Try inverse rate
+                    inv_rate = get_exchange_rate(user, 'USD', tx.currency, tx.date)
+                    if inv_rate and inv_rate != 0:
+                        amount_usd = tx.amount / inv_rate
+                    else:
+                        # No rate found - skip this transaction
+                        missing_rates_count += 1
+                        continue
+
+            # Add to category total
+            if cat_name not in category_totals:
+                category_totals[cat_name] = Decimal('0')
+            category_totals[cat_name] += amount_usd
+
+        # Convert to list format sorted by total descending
         cat_expenses = [
             {
-                'category': row['cat_name'],
+                'category': cat_name,
                 'currency': 'USD',
-                'total': str(row['total'].quantize(Decimal('0.01'))) if row['total'] else '0.00',
+                'total': str(total.quantize(Decimal('0.01'))),
             }
-            for row in agg
+            for cat_name, total in sorted(category_totals.items(), key=lambda x: x[1], reverse=True)
         ]
+
+        missing_rates = missing_rates_count
     else:
+        missing_rates = 0
+
         # Aggregate by category AND currency (no USD conversion)
         agg = (
             month_qs
@@ -1162,6 +1191,7 @@ def api_category_expenses(request):
         'm_current': month_str(current_year, current_month),
         'm_prev': month_str(py, pm),
         'convert_to_usd': convert_to_usd,
+        'missing_rates': missing_rates,
     })
 
 

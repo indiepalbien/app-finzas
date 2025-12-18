@@ -215,9 +215,18 @@
           currentLink.style.display = 'none';
         }
 
+        // Show warning if converting to USD and there are missing rates
+        let warningHtml = '';
+        if (data.convert_to_usd && data.missing_rates > 0) {
+          warningHtml = `<div style="background:#fff4e5;border:1px solid #ffb74d;padding:0.5rem;margin-bottom:0.5rem;border-radius:4px;font-size:0.9rem">
+            ⚠️ <strong>${data.missing_rates} transacciones</strong> no tienen tasa de cambio y no están incluidas en estos totales.
+          </div>`;
+        }
+
         // Render table
         if (data.cat_expenses && data.cat_expenses.length > 0) {
-          let html = '<table style="width:100%;border-collapse:collapse"><thead><tr>';
+          let html = warningHtml;
+          html += '<table style="width:100%;border-collapse:collapse"><thead><tr>';
           html += '<th style="text-align:left;border-bottom:2px solid var(--border);padding:.25rem 0">Categoría</th>';
 
           // Show currency column only if not converting to USD
@@ -247,7 +256,7 @@
           html += '</tbody></table>';
           content.innerHTML = html;
         } else {
-          content.innerHTML = '<p style="padding:.3rem 0">Sin gastos en este mes.</p>';
+          content.innerHTML = warningHtml + '<p style="padding:.3rem 0">Sin gastos en este mes.</p>';
         }
       } catch (error) {
         console.error('Error loading category expenses:', error);
