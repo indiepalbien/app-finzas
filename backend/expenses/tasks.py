@@ -107,12 +107,14 @@ def sync_splitwise_for_user(user_id):
         groups_map = {group.getId(): group.getName() for group in groups}
         
         # Get recent expenses (last 100)
-        expenses = sObj.getExpenses(limit=100)
+        expenses = sObj.getExpenses(limit=10)
         
     except Exception:
         logger.exception("Error fetching Splitwise data for user %s", user_id)
         return
 
+    transactions_created = 0
+    transactions_updated = 0
     for expense in expenses:
         try:
             expense_id = expense.getId()
@@ -129,10 +131,10 @@ def sync_splitwise_for_user(user_id):
                 continue
             
             # Get net balance (amount user owes or is owed)
-            # Positive net_balance = user owes (expense)
-            # Negative net_balance = user is owed (income/reimbursement)
+            # Positive net_balance in Splitwise = user owes/paid (expense) = should be NEGATIVE in our app
+            # Negative net_balance in Splitwise = user is owed (income) = should be POSITIVE in our app
             net_balance = float(user_share.getNetBalance())
-            amount = Decimal(str(net_balance))
+            amount = Decimal(str(-net_balance))  # Invert sign
             
             # Skip if amount is zero
             if amount == 0:
@@ -190,7 +192,9 @@ def sync_splitwise_for_user(user_id):
                         'date': date,
                     }
                 )
-                if not created:
+                if created:
+                    transactions_created += 1
+                else:
                     updated = False
                     if tx.amount != amount:
                         tx.amount = amount; updated = True
@@ -201,6 +205,7 @@ def sync_splitwise_for_user(user_id):
                     if tx.currency != currency:
                         tx.currency = currency; updated = True
                     if updated:
+                        transactions_updated += 1
                         tx.save()
             except Exception:
                 logger.debug("Transaction model ausente o error creando tx", exc_info=True)
@@ -210,12 +215,44 @@ def sync_splitwise_for_user(user_id):
 
     account.last_synced = timezone.now()
     account.save()
+    
+    logger.info(
+        f"Splitwise sync for user {account.user.username} (ID: {user_id}): "
+        f"{transactions_created} new, {transactions_updated} updated"
+    )
+    
+    return {
+        'user_id': user_id,
+        'username': account.user.username,
+        'created': transactions_created,
+        'updated': transactions_updated
+    }
 
 @shared_task
 def sync_all_splitwise():
     ids = list(SplitwiseAccount.objects.values_list('user_id', flat=True))
+    logger.info(f"Starting Splitwise sync for {len(ids)} users")
+    
+    total_created = 0
+    total_updated = 0
+    results = []
+    
     for uid in ids:
-        sync_splitwise_for_user.delay(uid)
+        result = sync_splitwise_for_user(uid)
+        if result:
+            results.append(result)
+            total_created += result.get('created', 0)
+            total_updated += result.get('updated', 0)
+    
+    logger.info(
+        f"Splitwise sync completed: {len(results)} users processed, "
+        f"{total_created} total new transactions, {total_updated} total updated"
+    )
+    
+    for result in results:
+        logger.debug(
+            f"  - {result['username']}: {result['created']} new, {result['updated']} updated"
+        )
 
 
 # ============================================================================
