@@ -1429,10 +1429,10 @@ def get_category_expenses(user, month_qs, convert_to_usd=False):
                 missing_rates_count += 1
                 continue
 
-            # Add to category total (use absolute value)
+            # Add to category total (keep sign: positive = expense, negative = income)
             if cat_name not in category_totals:
                 category_totals[cat_name] = Decimal('0')
-            category_totals[cat_name] += abs(amount_usd)
+            category_totals[cat_name] += amount_usd
 
         # Convert to list format sorted by total descending
         cat_expenses = [
@@ -1447,7 +1447,7 @@ def get_category_expenses(user, month_qs, convert_to_usd=False):
         return cat_expenses, missing_rates_count
 
     else:
-        # Group by category AND currency (using absolute values)
+        # Group by category AND currency (keep sign: positive = expense, negative = income)
         category_currency_totals = {}
         transactions = month_qs.select_related('category')
 
@@ -1458,8 +1458,8 @@ def get_category_expenses(user, month_qs, convert_to_usd=False):
 
             if key not in category_currency_totals:
                 category_currency_totals[key] = Decimal('0')
-            # Use absolute value to include both income and expenses
-            category_currency_totals[key] += abs(tx.amount)
+            # Keep sign to distinguish income from expenses
+            category_currency_totals[key] += tx.amount
 
         # Sort by category name, then currency
         cat_expenses = [
@@ -1557,7 +1557,7 @@ def api_project_expenses(request):
     all_txs = Transaction.objects.filter(user=user, project__isnull=False).exclude(amount=0)
 
     if convert_to_usd:
-        # Convert to USD and group by project (using absolute values)
+        # Convert to USD and group by project (keep sign: positive = expense, negative = income)
         project_totals = {}
         missing_rates_count = 0
         transactions = all_txs.select_related('project')
@@ -1572,7 +1572,7 @@ def api_project_expenses(request):
 
             if proj_name not in project_totals:
                 project_totals[proj_name] = Decimal('0')
-            project_totals[proj_name] += abs(amount_usd)
+            project_totals[proj_name] += amount_usd
 
         proj_expenses = [
             {
@@ -1584,7 +1584,7 @@ def api_project_expenses(request):
         ]
         missing_rates = missing_rates_count
     else:
-        # Group by project AND currency (using absolute values)
+        # Group by project AND currency (keep sign: positive = expense, negative = income)
         project_currency_totals = {}
         transactions = all_txs.select_related('project')
 
@@ -1595,8 +1595,8 @@ def api_project_expenses(request):
 
             if key not in project_currency_totals:
                 project_currency_totals[key] = Decimal('0')
-            # Use absolute value to include both income and expenses
-            project_currency_totals[key] += abs(tx.amount)
+            # Keep sign to distinguish income from expenses
+            project_currency_totals[key] += tx.amount
 
         # Sort by project name, then currency
         proj_expenses = [
