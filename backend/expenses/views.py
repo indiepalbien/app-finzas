@@ -327,7 +327,7 @@ def edit_category_transactions(request):
 
     if not category_name:
         messages.error(request, "Categoría requerida.")
-        return redirect("expenses:profile")
+        return redirect("profile")
 
     if request.method == "POST":
         action = request.POST.get("action") or ""
@@ -375,7 +375,7 @@ def edit_category_transactions(request):
             transactions_qs = Transaction.objects.filter(user=user, category=category)
         except Category.DoesNotExist:
             messages.error(request, f"Categoría '{category_name}' no encontrada.")
-            return redirect("expenses:profile")
+            return redirect("profile")
 
     # Apply currency filter if provided
     if currency:
