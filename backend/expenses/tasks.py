@@ -107,8 +107,24 @@ def sync_splitwise_for_user(user_id):
         groups_map = {group.getId(): group.getName() for group in groups}
         logger.info(f"Found {len(groups)} Splitwise groups: {groups_map}")
 
-        # Get recent expenses (last 100)
-        expenses = sObj.getExpenses(limit=100)
+        # Build parameters for fetching expenses
+        params = {'limit': 100}
+
+        # Only fetch expenses updated since last sync (or last 6 months if never synced)
+        if account.last_synced:
+            # Fetch expenses updated since last sync
+            updated_after = account.last_synced.strftime('%Y-%m-%dT%H:%M:%SZ')
+            params['updated_after'] = updated_after
+            logger.info(f"Fetching expenses updated after {updated_after}")
+        else:
+            # First sync - only fetch expenses from last 6 months
+            from datetime import timedelta
+            six_months_ago = (timezone.now() - timedelta(days=180)).strftime('%Y-%m-%dT%H:%M:%SZ')
+            params['dated_after'] = six_months_ago
+            logger.info(f"First sync - fetching expenses from last 6 months (after {six_months_ago})")
+
+        # Get recent expenses (newest first by default)
+        expenses = sObj.getExpenses(**params)
         logger.info(f"Fetched {len(expenses)} Splitwise expenses")
 
     except Exception:
