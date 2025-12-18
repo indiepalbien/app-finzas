@@ -441,7 +441,16 @@
           html += '</th></tr></thead><tbody>';
 
           data.proj_expenses.forEach(row => {
-            html += '<tr><td style="padding:.3rem 0;border-bottom:1px dashed var(--border)">' + row.project + '</td>';
+            html += '<tr>';
+
+            // Build the URL for filtering transactions by project (no month filter - all time)
+            const projectParam = encodeURIComponent(row.project);
+            const currencyParam = data.convert_to_usd ? '' : `&currency=${encodeURIComponent(row.currency)}`;
+            const filterUrl = `/expenses/manage/category-transactions/?category=&project=${projectParam}${currencyParam}`;
+
+            html += `<td style="padding:.3rem 0;border-bottom:1px dashed var(--border)">`;
+            html += `<a href="${filterUrl}" style="color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)">${row.project}</a>`;
+            html += `</td>`;
 
             if (!data.convert_to_usd) {
               html += '<td style="padding:.3rem 0;text-align:center;border-bottom:1px dashed var(--border)">' + row.currency + '</td>';
@@ -529,7 +538,17 @@
           html += '</th></tr></thead><tbody>';
 
           data.src_expenses.forEach(row => {
-            html += '<tr><td style="padding:.3rem 0;border-bottom:1px dashed var(--border)">' + row.source + '</td>';
+            html += '<tr>';
+
+            // Build the URL for filtering transactions by source
+            const sourceParam = encodeURIComponent(row.source);
+            const currencyParam = data.convert_to_usd ? '' : `&currency=${encodeURIComponent(row.currency)}`;
+            const monthParam = `&month=${encodeURIComponent(data.selected_month_str)}`;
+            const filterUrl = `/expenses/manage/category-transactions/?category=&source=${sourceParam}${currencyParam}${monthParam}`;
+
+            html += `<td style="padding:.3rem 0;border-bottom:1px dashed var(--border)">`;
+            html += `<a href="${filterUrl}" style="color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)">${row.source}</a>`;
+            html += `</td>`;
 
             if (!data.convert_to_usd) {
               html += '<td style="padding:.3rem 0;text-align:center;border-bottom:1px dashed var(--border)">' + row.currency + '</td>';
@@ -564,7 +583,8 @@
 
     // Reload when convert checkbox changes
     convertCheckbox.addEventListener('change', () => {
-      loadSourceExpenses(srcCurrentMonthStr);
+      // Use current month or null to reload the currently displayed month
+      loadSourceExpenses(srcCurrentMonthStr || null);
     });
 
     // Initial load

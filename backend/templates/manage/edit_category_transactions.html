@@ -58,13 +58,13 @@
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;">
         <div>
           {% if tx_page.has_previous %}
-            <a href="?page={{ tx_page.previous_page_number }}&category={{ category_name }}{% if currency %}&currency={{ currency }}{% endif %}{% if month_param %}&month={{ month_param }}{% endif %}">« Anterior</a>
+            <a href="?page={{ tx_page.previous_page_number }}{% if category_name %}&category={{ category_name }}{% endif %}{% if source_name %}&source={{ source_name }}{% endif %}{% if project_name %}&project={{ project_name }}{% endif %}{% if currency %}&currency={{ currency }}{% endif %}{% if month_param %}&month={{ month_param }}{% endif %}">« Anterior</a>
           {% endif %}
         </div>
         <div>Página {{ tx_page.number }} de {{ tx_page.paginator.num_pages }}</div>
         <div>
           {% if tx_page.has_next %}
-            <a href="?page={{ tx_page.next_page_number }}&category={{ category_name }}{% if currency %}&currency={{ currency }}{% endif %}{% if month_param %}&month={{ month_param }}{% endif %}">Siguiente »</a>
+            <a href="?page={{ tx_page.next_page_number }}{% if category_name %}&category={{ category_name }}{% endif %}{% if source_name %}&source={{ source_name }}{% endif %}{% if project_name %}&project={{ project_name }}{% endif %}{% if currency %}&currency={{ currency }}{% endif %}{% if month_param %}&month={{ month_param }}{% endif %}">Siguiente »</a>
           {% endif %}
         </div>
       </div>

@@ -410,22 +410,47 @@ def edit_category_transactions(request):
 
     # GET request - show filtered transactions
     category_name = request.GET.get('category', '')
+    source_name = request.GET.get('source', '')
+    project_name = request.GET.get('project', '')
     currency = request.GET.get('currency', '')
     month_param = request.GET.get('month', '')  # Format: YYYY-MM
 
-    if not category_name:
-        messages.error(request, "Categoría requerida.")
+    # Need at least one filter (category, source, or project)
+    if not category_name and not source_name and not project_name:
+        messages.error(request, "Se requiere al menos un filtro (categoría, origen o proyecto).")
         return redirect("profile")
 
-    # Build queryset with filters
-    if category_name == 'Sin categoría':
-        transactions_qs = Transaction.objects.filter(user=user, category__isnull=True)
-    else:
+    # Start with base queryset
+    transactions_qs = Transaction.objects.filter(user=user)
+
+    # Apply category filter if provided
+    if category_name:
+        if category_name == 'Sin categoría':
+            transactions_qs = transactions_qs.filter(category__isnull=True)
+        else:
+            try:
+                category = Category.objects.get(user=user, name=category_name)
+                transactions_qs = transactions_qs.filter(category=category)
+            except Category.DoesNotExist:
+                messages.error(request, f"Categoría '{category_name}' no encontrada.")
+                return redirect("profile")
+
+    # Apply source filter if provided
+    if source_name:
         try:
-            category = Category.objects.get(user=user, name=category_name)
-            transactions_qs = Transaction.objects.filter(user=user, category=category)
-        except Category.DoesNotExist:
-            messages.error(request, f"Categoría '{category_name}' no encontrada.")
+            source = Source.objects.get(user=user, name=source_name)
+            transactions_qs = transactions_qs.filter(source=source)
+        except Source.DoesNotExist:
+            messages.error(request, f"Origen '{source_name}' no encontrado.")
+            return redirect("profile")
+
+    # Apply project filter if provided
+    if project_name:
+        try:
+            project = Project.objects.get(user=user, name=project_name)
+            transactions_qs = transactions_qs.filter(project=project)
+        except Project.DoesNotExist:
+            messages.error(request, f"Proyecto '{project_name}' no encontrado.")
             return redirect("profile")
 
     # Apply currency filter if provided
@@ -455,16 +480,26 @@ def edit_category_transactions(request):
     categories = Category.objects.filter(user=user).order_by("name")
 
     # Build filter description for display
-    filter_desc = f"Categoría: {category_name}"
+    filter_parts = []
+    if category_name:
+        filter_parts.append(f"Categoría: {category_name}")
+    if source_name:
+        filter_parts.append(f"Origen: {source_name}")
+    if project_name:
+        filter_parts.append(f"Proyecto: {project_name}")
     if currency:
-        filter_desc += f" | Moneda: {currency}"
+        filter_parts.append(f"Moneda: {currency}")
     if month_param:
-        filter_desc += f" | Mes: {month_param}"
+        filter_parts.append(f"Mes: {month_param}")
+
+    filter_desc = " | ".join(filter_parts)
 
     context = {
         "categories": categories,
         "tx_page": tx_page,
         "category_name": category_name,
+        "source_name": source_name,
+        "project_name": project_name,
         "currency": currency,
         "month_param": month_param,
         "filter_desc": filter_desc,
