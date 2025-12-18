@@ -57,6 +57,13 @@ class Command(BaseCommand):
         # Map of alias address to user id
         alias_map = {cfg.full_address.lower(): cfg.user_id for cfg in UserEmailConfig.objects.filter(active=True)}
 
+        # Map of forwarding email to user id
+        forwarding_map = {
+            cfg.forwarding_email.lower(): cfg.user_id
+            for cfg in UserEmailConfig.objects.filter(active=True, forwarding_email__isnull=False)
+            if cfg.forwarding_email
+        }
+
         def _decode_header(value: Optional[str]) -> str:
             if not value:
                 return ''
@@ -98,6 +105,15 @@ class Command(BaseCommand):
                 if addr in alias_map:
                     matched_user_id = alias_map[addr]
                     break
+
+            if not matched_user_id and from_addr:
+                # Try to match From address against forwarding_map
+                from_email = from_addr
+                if '<' in from_addr and '>' in from_addr:
+                    from_email = from_addr.split('<')[-1].split('>')[0]
+                from_email = from_email.strip().lower()
+                if from_email in forwarding_map:
+                    matched_user_id = forwarding_map[from_email]
 
             if not matched_user_id:
                 # Skip if no match

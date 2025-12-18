@@ -8,6 +8,39 @@
   {% if header_note %}
   <p><em>{{ header_note }}</em></p>
   {% endif %}
+
+  {% if email_config %}
+  <div style="margin-top: 1rem; padding: 1rem; border: 2px solid #333; background: #f9f9f9;">
+    <h3>Configurar Email de Reenvío</h3>
+    <p><small>Si reenvías facturas desde tu email personal, configúralo aquí para que podamos identificar tus mensajes.</small></p>
+
+    <form method="post" action="{% url 'expenses:update_forwarding_email' %}">
+      {% csrf_token %}
+      <label for="forwarding_email" style="display: block; margin-bottom: 0.5rem;">Tu email personal:</label>
+      <input
+        type="email"
+        id="forwarding_email"
+        name="forwarding_email"
+        value="{{ email_config.forwarding_email|default:'' }}"
+        placeholder="ejemplo@gmail.com"
+        style="width: 300px; padding: 0.5rem; border: 2px solid #333;"
+      >
+      <button type="submit" style="padding: 0.5rem 1rem; margin-left: 0.5rem; border: 2px solid #333; background: #fff; cursor: pointer;">Guardar</button>
+
+      {% if email_config.forwarding_email %}
+      <button type="submit" onclick="document.getElementById('forwarding_email').value=''; return true;"
+              style="padding: 0.5rem 1rem; margin-left: 0.5rem; border: 2px solid #333; background: #fff; cursor: pointer;">
+        Limpiar
+      </button>
+      {% endif %}
+    </form>
+
+    {% if email_config.forwarding_email %}
+    <p style="margin-top: 0.5rem;"><small>📧 Email configurado: <strong>{{ email_config.forwarding_email }}</strong></small></p>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% if create_url_name %}
   <p><a href="{% url create_url_name %}?next={{ request.get_full_path|urlencode }}">Añadir nuevo</a></p>
   {% endif %}

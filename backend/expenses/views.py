@@ -17,7 +17,10 @@ from django.urls import reverse_lazy
 from urllib.parse import quote_plus
 from .models import Category, Project, Payee, Source, Exchange, Balance, Transaction, UserEmailMessage, UserEmailConfig, PendingTransaction, SplitwiseAccount, DefaultExchangeRate
 from . import forms
-from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.http import require_POST, require_GET, require_http_methods
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.utils import timezone as dj_timezone
 from decimal import Decimal, InvalidOperation
 import datetime
@@ -535,6 +538,8 @@ class EmailMessageListView(LoginRequiredMixin, ListView):
             ctx['header_note'] = f"Tu dirección de correo: {cfg.full_address}"
         else:
             ctx['header_note'] = "No tienes una dirección de correo configurada aún."
+        # Pass email config to template for forwarding email form
+        ctx['email_config'] = cfg
         return ctx
 
 
@@ -1115,3 +1120,40 @@ def api_category_expenses(request):
         'm_prev': month_str(py, pm),
         'missing_rates': missing_rates,
     })
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_forwarding_email(request):
+    """Update user's forwarding email address"""
+    try:
+        cfg = UserEmailConfig.objects.get(user=request.user, active=True)
+    except UserEmailConfig.DoesNotExist:
+        messages.error(request, "No tienes una configuración de email.")
+        return redirect('expenses:manage_emails')
+
+    forwarding_email = request.POST.get('forwarding_email', '').strip()
+
+    # Allow clearing the field
+    if not forwarding_email:
+        cfg.forwarding_email = None
+        cfg.save()
+        messages.success(request, "Email de reenvío eliminado correctamente.")
+        return redirect('expenses:manage_emails')
+
+    # Validate email format (basic)
+    try:
+        validate_email(forwarding_email)
+    except ValidationError:
+        messages.error(request, "Email inválido. Por favor verifica el formato.")
+        return redirect('expenses:manage_emails')
+
+    # Check for uniqueness (catch IntegrityError)
+    try:
+        cfg.forwarding_email = forwarding_email
+        cfg.save()
+        messages.success(request, f"Email de reenvío actualizado a: {forwarding_email}")
+    except IntegrityError:
+        messages.error(request, "Este email ya está en uso por otro usuario.")
+
+    return redirect('expenses:manage_emails')

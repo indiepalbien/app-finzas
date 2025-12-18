@@ -18,8 +18,11 @@ admin.site.register(DefaultExchangeRate)
 
 @admin.register(UserEmailConfig)
 class UserEmailConfigAdmin(admin.ModelAdmin):
-	list_display = ("user", "full_address", "active", "created_at")
-	search_fields = ("user__username", "full_address", "alias_localpart")
+	list_display = ("user", "full_address", "forwarding_email", "active", "created_at")
+	search_fields = ("user__username", "user__email", "full_address", "forwarding_email", "alias_localpart")
+	list_filter = ("active", "created_at")
+	readonly_fields = ("created_at", "full_address")
+	fields = ("user", "alias_localpart", "domain", "full_address", "forwarding_email", "active", "created_at")
 
 
 @admin.register(UserEmailMessage)

@@ -86,6 +86,13 @@ class UserEmailConfig(models.Model):
         mailbox_password = models.CharField(max_length=255, blank=True)
         active = models.BooleanField(default=True)
         created_at = models.DateTimeField(auto_now_add=True)
+        # Personal email address used when forwarding invoices
+        forwarding_email = models.EmailField(
+            blank=True,
+            null=True,
+            unique=True,
+            help_text="Personal email address used when forwarding invoices"
+        )
 
         class Meta:
             verbose_name = "User Email Config"
