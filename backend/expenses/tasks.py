@@ -107,7 +107,7 @@ def sync_splitwise_for_user(user_id):
         groups_map = {group.getId(): group.getName() for group in groups}
         
         # Get recent expenses (last 100)
-        expenses = sObj.getExpenses(limit=10)
+        expenses = sObj.getExpenses(limit=100)
         
     except Exception:
         logger.exception("Error fetching Splitwise data for user %s", user_id)
@@ -190,6 +190,7 @@ def sync_splitwise_for_user(user_id):
                         'description': description,
                         'currency': currency,
                         'date': date,
+                        'source': source_obj,
                     }
                 )
                 if created:
