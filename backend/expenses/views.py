@@ -320,15 +320,7 @@ def edit_category_transactions(request):
     """View to edit transactions filtered by category and optionally currency/month."""
     user = request.user
 
-    # Get filter parameters
-    category_name = request.GET.get('category', '')
-    currency = request.GET.get('currency', '')
-    month_param = request.GET.get('month', '')  # Format: YYYY-MM
-
-    if not category_name:
-        messages.error(request, "Categoría requerida.")
-        return redirect("profile")
-
+    # Handle POST requests first (for AJAX saves)
     if request.method == "POST":
         action = request.POST.get("action") or ""
 
@@ -349,22 +341,38 @@ def edit_category_transactions(request):
                         "errors": [message]
                     }, status=400)
 
-            # Traditional POST response (fallback)
+            # Traditional POST response (fallback) - redirect with filters
+            category_name = request.GET.get('category', '')
+            currency = request.GET.get('currency', '')
+            month_param = request.GET.get('month', '')
+
             if success:
                 messages.success(request, message)
             else:
                 messages.error(request, message)
 
-            # Redirect back with same filters
-            params = f"?category={category_name}"
-            if currency:
-                params += f"&currency={currency}"
-            if month_param:
-                params += f"&month={month_param}"
-            return redirect(reverse("expenses:edit_category_transactions") + params)
+            # Redirect back with same filters if available
+            if category_name:
+                params = f"?category={category_name}"
+                if currency:
+                    params += f"&currency={currency}"
+                if month_param:
+                    params += f"&month={month_param}"
+                return redirect(reverse("expenses:edit_category_transactions") + params)
+            else:
+                return redirect("profile")
 
         messages.error(request, "Acción no reconocida.")
-        return redirect("expenses:edit_category_transactions")
+        return redirect("profile")
+
+    # GET request - show filtered transactions
+    category_name = request.GET.get('category', '')
+    currency = request.GET.get('currency', '')
+    month_param = request.GET.get('month', '')  # Format: YYYY-MM
+
+    if not category_name:
+        messages.error(request, "Categoría requerida.")
+        return redirect("profile")
 
     # Build queryset with filters
     if category_name == 'Sin categoría':
