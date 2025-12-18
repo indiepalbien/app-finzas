@@ -129,8 +129,10 @@ def sync_splitwise_for_user(user_id):
                 continue
             
             # Get net balance (amount user owes or is owed)
+            # Positive net_balance = user owes (expense)
+            # Negative net_balance = user is owed (income/reimbursement)
             net_balance = float(user_share.getNetBalance())
-            amount = abs(Decimal(str(net_balance)))
+            amount = Decimal(str(net_balance))
             
             # Skip if amount is zero
             if amount == 0:

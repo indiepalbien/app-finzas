@@ -138,6 +138,8 @@ class Transaction(models.Model):
     description = models.CharField(max_length=255)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     currency = models.CharField(max_length=3)
+    amount_usd = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, 
+                                     help_text="Pre-calculated USD amount for performance")
     source = models.ForeignKey(Source, on_delete=models.SET_NULL, null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, blank=True)
@@ -161,11 +163,17 @@ class Transaction(models.Model):
             models.Index(fields=["user", "date", "id"], name="tx_user_date_id"),
         ]
 
-    def to_usd(self):
-        """Return amount converted to USD using the most recent Exchange for this user.
+    def save(self, *args, **kwargs):
+        """Override save to pre-calculate amount_usd."""
+        # Only recalculate if amount_usd is not being explicitly set
+        update_fields = kwargs.get('update_fields')
+        if update_fields is None or 'amount_usd' not in update_fields:
+            # Calculate USD amount before saving
+            self.amount_usd = self._calculate_usd()
+        super().save(*args, **kwargs)
 
-        Returns Decimal or None if no rate found.
-        """
+    def _calculate_usd(self):
+        """Calculate USD amount using exchange rates."""
         if self.currency.upper() == 'USD':
             return self.amount
 
@@ -199,6 +207,19 @@ class Transaction(models.Model):
                 return None
 
         return None
+
+    def to_usd(self):
+        """Return amount converted to USD.
+        
+        Uses pre-calculated amount_usd if available, otherwise calculates on-the-fly.
+        Returns Decimal or None if no rate found.
+        """
+        # Use pre-calculated value if available
+        if self.amount_usd is not None:
+            return self.amount_usd
+        
+        # Fallback to calculation (for backward compatibility with old records)
+        return self._calculate_usd()
 
 
 class PendingTransaction(models.Model):

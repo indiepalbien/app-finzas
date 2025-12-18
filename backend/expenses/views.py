@@ -687,53 +687,13 @@ def profile(request):
     )
 
     # Annotate FX rates via subqueries (latest <= tx date)
-    rate_direct = Subquery(
-        Exchange.objects.filter(
-            user=user,
-            source_currency__iexact=OuterRef('currency'),
-            target_currency__iexact='USD',
-            date__lte=OuterRef('date'),
-        )
-        .order_by('-date')
-        .values('rate')[:1]
-    )
-    rate_inverse = Subquery(
-        Exchange.objects.filter(
-            user=user,
-            source_currency__iexact='USD',
-            target_currency__iexact=OuterRef('currency'),
-            date__lte=OuterRef('date'),
-        )
-        .order_by('-date')
-        .values('rate')[:1]
-    )
-    default_rate = Subquery(
-        DefaultExchangeRate.objects.filter(currency__iexact=OuterRef('currency'))
-        .values('rate')[:1]
-    )
-
-    annotated = month_qs.annotate(
-        rate_direct=rate_direct,
-        rate_inverse=rate_inverse,
-        rate_default=default_rate,
-    )
-
-    usd_amount = Case(
-        When(currency__iexact='USD', then=F('amount')),
-        When(rate_direct__isnull=False, then=ExpressionWrapper(F('amount') * F('rate_direct'), output_field=DecimalField(max_digits=20, decimal_places=8))),
-        When(rate_inverse__isnull=False, then=ExpressionWrapper(F('amount') / F('rate_inverse'), output_field=DecimalField(max_digits=20, decimal_places=8))),
-        When(rate_default__isnull=False, then=ExpressionWrapper(F('amount') / F('rate_default'), output_field=DecimalField(max_digits=20, decimal_places=8))),
-        default=Value(None),
-        output_field=DecimalField(max_digits=20, decimal_places=8),
-    )
-
-    annotated = annotated.annotate(usd_amount=usd_amount)
-    missing_rates = annotated.filter(usd_amount__isnull=True).count()
+    # Use pre-calculated amount_usd field for performance
+    missing_rates = month_qs.filter(amount_usd__isnull=True).count()
 
     agg = (
-        annotated.filter(usd_amount__isnull=False)
+        month_qs.filter(amount_usd__isnull=False)
         .values(cat_name=Coalesce('category__name', Value('Sin categoría')))
-        .annotate(total_usd=Sum('usd_amount'))
+        .annotate(total_usd=Sum('amount_usd'))
         .order_by('-total_usd')
     )
     cat_expenses = [
@@ -1037,6 +997,17 @@ def splitwise_callback(request):
     except Exception:
         logger.exception("Error obteniendo usuario de Splitwise")
 
+    # Check if this Splitwise account is already connected to another user
+    if split_user_id:
+        existing = SplitwiseAccount.objects.filter(splitwise_user_id=split_user_id).exclude(user=request.user).first()
+        if existing:
+            messages.error(
+                request,
+                f"Esta cuenta de Splitwise ya está conectada a otro usuario. "
+                f"Si crees que esto es un error, contacta al soporte."
+            )
+            return redirect('expenses:splitwise_status')
+
     account, _ = SplitwiseAccount.objects.get_or_create(user=request.user)
     account.oauth_token = access_token
     account.oauth_token_secret = access_secret
@@ -1045,6 +1016,8 @@ def splitwise_callback(request):
     if raw:
         account.raw = raw
     account.save()
+    
+    messages.success(request, "✅ Cuenta de Splitwise conectada exitosamente")
     return redirect(request.GET.get('next') or '/')
 
 
@@ -1058,3 +1031,87 @@ def splitwise_status(request):
         "connected": connected,
     }
     return render(request, "manage/splitwise.html", context)
+
+
+@login_required
+@require_GET
+def api_recent_transactions(request):
+    """API endpoint: Return recent transactions as JSON for async loading."""
+    user = request.user
+    page_num = int(request.GET.get('page', 1))
+    
+    recent_tx = Transaction.objects.filter(user=user).order_by('-date', '-id')
+    paginator = Paginator(recent_tx, 5)
+    
+    try:
+        tx_page = paginator.page(page_num)
+    except:
+        tx_page = paginator.page(1)
+    
+    transactions = [
+        {
+            'id': t.pk,
+            'description': t.description,
+            'amount': str(t.amount),
+            'currency': t.currency,
+            'date': t.date.isoformat(),
+            'edit_url': reverse('expenses:manage_transaction_edit', args=[t.pk]),
+        }
+        for t in tx_page
+    ]
+    
+    return JsonResponse({
+        'transactions': transactions,
+        'has_previous': tx_page.has_previous(),
+        'has_next': tx_page.has_next(),
+        'previous_page': tx_page.previous_page_number() if tx_page.has_previous() else None,
+        'next_page': tx_page.next_page_number() if tx_page.has_next() else None,
+        'current_page': tx_page.number,
+        'num_pages': paginator.num_pages,
+        'page_range': list(paginator.page_range),
+    })
+
+
+@login_required
+@require_GET
+def api_category_expenses(request):
+    """API endpoint: Return category expenses for a month as JSON for async loading."""
+    user = request.user
+    m_param = request.GET.get('m', '')
+    
+    current_year, current_month = current_month_tuple()
+    sel_year, sel_month = parse_month_str(m_param, default_year=current_year, default_month=current_month)
+    
+    month_qs = Transaction.objects.filter(
+        user=user,
+        date__year=sel_year,
+        date__month=sel_month,
+    )
+    
+    # Use pre-calculated amount_usd field
+    missing_rates = month_qs.filter(amount_usd__isnull=True).count()
+    
+    agg = (
+        month_qs.filter(amount_usd__isnull=False)
+        .values(cat_name=Coalesce('category__name', Value('Sin categoría')))
+        .annotate(total_usd=Sum('amount_usd'))
+        .order_by('-total_usd')
+    )
+    
+    cat_expenses = [
+        {
+            'name': row['cat_name'],
+            'total_usd': str(row['total_usd'].quantize(Decimal('0.01'))) if row['total_usd'] else '0.00',
+        }
+        for row in agg
+    ]
+    
+    py, pm = prev_month(sel_year, sel_month)
+    
+    return JsonResponse({
+        'cat_expenses': cat_expenses,
+        'selected_month_str': month_str(sel_year, sel_month),
+        'm_current': month_str(current_year, current_month),
+        'm_prev': month_str(py, pm),
+        'missing_rates': missing_rates,
+    })

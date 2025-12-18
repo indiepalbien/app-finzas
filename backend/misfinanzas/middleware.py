@@ -37,12 +37,17 @@ class BlockMaliciousRequestsMiddleware:
 
 
 class VaryOnCookieMiddleware:
-    """Ensure HTML responses include `Vary: Cookie` to avoid CDN/shared-cache
-    serving pages with another user's CSRF token.
+    """Ensure HTML responses include `Vary: Cookie` and `Cache-Control: private`
+    to avoid CDN/shared-cache serving pages with another user's CSRF token.
 
     This is a lightweight mitigation for cases where a reverse proxy or CDN
     might cache HTML pages and accidentally return a page containing a
     different user's CSRF token (causing "CSRF token from POST incorrect").
+    
+    Security note: HTML pages with CSRF tokens should NEVER be cached by
+    shared caches (CDNs, proxies). We use:
+    - Cache-Control: private, no-store - Tells browsers to cache locally only
+    - Vary: Cookie - Tells caches that response varies by Cookie header
     """
 
     def __init__(self, get_response):
@@ -52,5 +57,10 @@ class VaryOnCookieMiddleware:
         response = self.get_response(request)
         content_type = (response.get('Content-Type') or '').lower()
         if content_type.startswith('text/html'):
+            # Add Vary: Cookie header
             patch_vary_headers(response, ['Cookie'])
+            # Prevent shared caches from storing HTML pages with CSRF tokens
+            # Allow browser cache but prevent CDN/proxy caching
+            if not response.get('Cache-Control'):
+                response['Cache-Control'] = 'private, no-store, max-age=0'
         return response

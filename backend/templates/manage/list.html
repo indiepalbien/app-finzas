@@ -18,6 +18,13 @@
         {% if obj.external_id %}<br><small>ID: {{ obj.external_id }}</small>{% endif %}
         {% if obj.reason %}<br><small>Motivo: {{ obj.reason }}</small>{% endif %}
         {% if obj.payload %}<br><small>Payload: {{ obj.payload }}</small>{% endif %}
+        {% if obj.processed_at and obj.processing_error %}
+          <br><span style="color: #d9534f; font-weight: bold;">❌ Error al procesar: {{ obj.processing_error }}</span>
+        {% elif obj.processed_at %}
+          <br><small style="color: #5cb85c;">✅ Procesado</small>
+        {% elif obj.downloaded_at %}
+          <br><small style="color: #f0ad4e;">⏳ Pendiente de procesamiento</small>
+        {% endif %}
         {% if edit_url_name %} — <a href="{% url edit_url_name obj.pk %}?next={{ request.get_full_path|urlencode }}">Editar</a>{% endif %}
         {% if delete_url_name %} · <a href="{% url delete_url_name obj.pk %}?next={{ request.get_full_path|urlencode }}">Borrar</a>{% endif %}
       </li>

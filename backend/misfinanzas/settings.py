@@ -235,8 +235,45 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'expenses.tasks': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'django.request': {
             'handlers': ['console_404filtered'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        # Reduce Celery verbosity
+        'celery': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'celery.worker': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'celery.worker.strategy': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'celery.beat': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Reduce library noise
+        'kombu': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'amqp': {
+            'handlers': ['console'],
             'level': 'WARNING',
             'propagate': False,
         },

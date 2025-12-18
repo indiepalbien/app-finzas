@@ -58,4 +58,8 @@ urlpatterns = [
     path("manage/splitwise/", views.splitwise_status, name="splitwise_status"),
     path('splitwise/connect/', views.splitwise_connect, name='splitwise_connect'),
     path('splitwise/callback/', views.splitwise_callback, name='splitwise_callback'),
+    
+    # API endpoints for async loading
+    path("api/recent-transactions/", views.api_recent_transactions, name="api_recent_transactions"),
+    path("api/category-expenses/", views.api_category_expenses, name="api_category_expenses"),
 ]
