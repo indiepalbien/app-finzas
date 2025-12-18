@@ -24,19 +24,30 @@ Tokens:        ["starb"]
 
 ### 2. **Generación de reglas**
 
-Cuando se categoriza una transacción, se crean **4 variantes de reglas**:
+Cuando se categoriza una transacción, se crean **4 variantes de reglas SEPARADAS para cada campo asignado**:
 
 ```python
 transacción: "Sole y Gian f*HANDY*" | $582.00 | UYU
 categoría: "Transferencias" | payee: "Sole"
 
-Regla 1: (sole, gian)
-Regla 2: (sole, gian) + $582.00 + UYU  [más específica]
-Regla 3: (sole, gian) + UYU
-Regla 4: (sole, gian) + $582.00
+REGLAS PARA CATEGORÍA:
+  Regla 1: (sole, gian) → Transferencias
+  Regla 2: (sole, gian) + $582.00 + UYU → Transferencias
+  Regla 3: (sole, gian) + UYU → Transferencias
+  Regla 4: (sole, gian) + $582.00 → Transferencias
+
+REGLAS PARA PAYEE (separadas):
+  Regla 5: (sole, gian) → Sole
+  Regla 6: (sole, gian) + $582.00 + UYU → Sole
+  Regla 7: (sole, gian) + UYU → Sole
+  Regla 8: (sole, gian) + $582.00 → Sole
 ```
 
-Cada regla se almacena por separado para poder usar la más específica que coincida.
+**Ventajas del enfoque separado:**
+- ✅ No todos los usuarios usan payee (algunos solo categorizan)
+- ✅ Mayor flexibilidad en matching
+- ✅ Puede matchear por categoría sola O por payee solo
+- ✅ Más escalable según el uso
 
 ### 3. **Aplicación de reglas**
 

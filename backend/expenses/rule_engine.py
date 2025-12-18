@@ -115,21 +115,28 @@ def generate_categorization_rules(
     """
     Generate multiple rule variants for a categorized transaction.
     
-    When a user categorizes a transaction, we create 4 rule variants:
-    1. (description_tokens)
-    2. (description_tokens, amount, currency)
-    3. (description_tokens, currency)
-    4. (description_tokens, amount)
+    Creates separate rules for category and payee independently:
+    - If category is assigned: creates 4 variants for category
+    - If payee is assigned: creates 4 variants for payee
     
-    Each rule is stored separately so we can use the most specific match.
+    This is better than combined rules because:
+    - Not all users use payee (some only categorize)
+    - Allows flexibility in matching
+    - Can match on category alone or payee alone
+    
+    Rules created per field:
+    1. (description_tokens) → category/payee
+    2. (description_tokens, amount, currency) → category/payee
+    3. (description_tokens, currency) → category/payee
+    4. (description_tokens, amount) → category/payee
     
     Args:
         user: User who owns the rule
         description: Transaction description
         amount: Transaction amount
         currency: Currency code
-        category: Assigned category
-        payee: Assigned payee
+        category: Assigned category (optional)
+        payee: Assigned payee (optional)
         
     Returns:
         List of created CategorizationRule objects
@@ -142,49 +149,97 @@ def generate_categorization_rules(
     description_str = ' '.join(tokens)
     rules = []
     
-    # Rule 1: Just description tokens
-    rule1, _ = CategorizationRule.objects.get_or_create(
-        user=user,
-        description_tokens=description_str,
-        amount=None,
-        currency=None,
-        category=category,
-        payee=payee,
-    )
-    rules.append(rule1)
+    # Create rules for category if assigned
+    if category:
+        # Rule 1: Just description tokens
+        rule1, _ = CategorizationRule.objects.get_or_create(
+            user=user,
+            description_tokens=description_str,
+            amount=None,
+            currency=None,
+            category=category,
+            payee=None,
+        )
+        rules.append(rule1)
+        
+        # Rule 2: Description + amount + currency (most specific)
+        rule2, _ = CategorizationRule.objects.get_or_create(
+            user=user,
+            description_tokens=description_str,
+            amount=amount,
+            currency=currency.upper(),
+            category=category,
+            payee=None,
+        )
+        rules.append(rule2)
+        
+        # Rule 3: Description + currency
+        rule3, _ = CategorizationRule.objects.get_or_create(
+            user=user,
+            description_tokens=description_str,
+            amount=None,
+            currency=currency.upper(),
+            category=category,
+            payee=None,
+        )
+        rules.append(rule3)
+        
+        # Rule 4: Description + amount
+        rule4, _ = CategorizationRule.objects.get_or_create(
+            user=user,
+            description_tokens=description_str,
+            amount=amount,
+            currency=None,
+            category=category,
+            payee=None,
+        )
+        rules.append(rule4)
     
-    # Rule 2: Description + amount + currency (most specific)
-    rule2, _ = CategorizationRule.objects.get_or_create(
-        user=user,
-        description_tokens=description_str,
-        amount=amount,
-        currency=currency.upper(),
-        category=category,
-        payee=payee,
-    )
-    rules.append(rule2)
-    
-    # Rule 3: Description + currency
-    rule3, _ = CategorizationRule.objects.get_or_create(
-        user=user,
-        description_tokens=description_str,
-        amount=None,
-        currency=currency.upper(),
-        category=category,
-        payee=payee,
-    )
-    rules.append(rule3)
-    
-    # Rule 4: Description + amount
-    rule4, _ = CategorizationRule.objects.get_or_create(
-        user=user,
-        description_tokens=description_str,
-        amount=amount,
-        currency=None,
-        category=category,
-        payee=payee,
-    )
-    rules.append(rule4)
+    # Create separate rules for payee if assigned
+    if payee:
+        # Rule 1: Just description tokens
+        rule1, _ = CategorizationRule.objects.get_or_create(
+            user=user,
+            description_tokens=description_str,
+            amount=None,
+            currency=None,
+            category=None,
+            payee=payee,
+        )
+        rules.append(rule1)
+        
+        # Rule 2: Description + amount + currency (most specific)
+        rule2, _ = CategorizationRule.objects.get_or_create(
+            user=user,
+            description_tokens=description_str,
+            amount=amount,
+            currency=currency.upper(),
+            category=None,
+            payee=payee,
+        )
+        rules.append(rule2)
+        
+        # Rule 3: Description + currency
+        rule3, _ = CategorizationRule.objects.get_or_create(
+            user=user,
+            description_tokens=description_str,
+            amount=None,
+            currency=currency.upper(),
+            category=None,
+            payee=payee,
+        )
+        rules.append(rule3)
+        
+        # Rule 4: Description + amount
+        rule4, _ = CategorizationRule.objects.get_or_create(
+            user=user,
+            description_tokens=description_str,
+            amount=amount,
+            currency=None,
+            category=None,
+            payee=payee,
+        )
+        rules.append(rule4)
     
     return rules
 

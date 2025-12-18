@@ -203,6 +203,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'expenses.tasks.update_exchange_rates',
         'schedule': crontab(hour=0, minute=0, day_of_week=0),  # Every Sunday at midnight
     },
+    'apply-categorization-rules-hourly': {
+        'task': 'expenses.tasks.apply_categorization_rules_all_users',
+        'schedule': crontab(minute=0),  # Every hour at minute 0
+        'kwargs': {'max_transactions_per_user': 100}  # Process max 100 per user per hour
+    },
 }
 
 # Logging (surface INFO logs for email ingestion in local/dev and worker/beat)

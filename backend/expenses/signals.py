@@ -27,30 +27,44 @@ def create_categorization_rules(sender, instance, created, update_fields, **kwar
     When a transaction is categorized, create smart categorization rules.
     
     Rules are generated when:
-    - A new transaction is saved with category/payee
-    - An existing transaction's category/payee is updated
+    - An existing transaction's category is updated
+    - An existing transaction's payee is updated
+    
+    Handles cases where user assigns:
+    - Only category (payee stays None)
+    - Only payee (category stays None)
+    - Both (different transactions)
+    
+    Then immediately spawns a Celery task to apply rules to other transactions.
     """
     # Avoid circular imports
     from .rule_engine import generate_categorization_rules
+    from .tasks import apply_categorization_rules_for_user
     
     # Skip if this is a new transaction (prefer explicit rule creation in views)
-    # or if we don't have a meaningful categorization
     if created:
         return
     
+    # Skip if update_fields is None (means all fields were updated, happens in some cases)
+    if update_fields is None:
+        return
+    
     # Check if category or payee was updated
-    is_category_update = update_fields and 'category' in update_fields
-    is_payee_update = update_fields and 'payee' in update_fields
+    is_category_update = 'category' in update_fields
+    is_payee_update = 'payee' in update_fields
     
     # If neither category nor payee was updated, skip
     if not (is_category_update or is_payee_update):
         return
     
-    # Only create rules if we have a category or payee assigned
+    # Skip if both category AND payee are None (nothing assigned)
     if not instance.category and not instance.payee:
         return
     
     # Generate rules for this categorization
+    # - If only category is assigned: creates rules for category
+    # - If only payee is assigned: creates rules for payee
+    # - If both: creates rules for both
     generate_categorization_rules(
         user=instance.user,
         description=instance.description,
@@ -58,4 +72,11 @@ def create_categorization_rules(sender, instance, created, update_fields, **kwar
         currency=instance.currency,
         category=instance.category,
         payee=instance.payee,
+    )
+    
+    # Immediately spawn Celery task to apply rules to other uncategorized transactions
+    # This happens asynchronously so it doesn't block the response
+    apply_categorization_rules_for_user.delay(
+        user_id=instance.user.id,
+        max_transactions=50  # Process up to 50 transactions per categorization
     )

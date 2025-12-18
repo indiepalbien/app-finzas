@@ -108,16 +108,17 @@ class GenerateCategoriesTestCase(TestCase):
         self.payee = Payee.objects.create(user=self.user, name="John")
 
     def test_generate_rules_creates_four_variants(self):
-        """Test that four rule variants are created."""
+        """Test that four rule variants are created for category."""
         rules = generate_categorization_rules(
             user=self.user,
             description="Sole y Gian f*HANDY*",
             amount=Decimal("582.00"),
             currency="UYU",
             category=self.category,
-            payee=self.payee,
+            payee=None,
         )
 
+        # Should create 4 rules for category
         self.assertEqual(len(rules), 4)
 
     def test_generate_rules_with_empty_description(self):
@@ -140,6 +141,7 @@ class GenerateCategoriesTestCase(TestCase):
             amount=Decimal("10.18"),
             currency="USD",
             category=self.category,
+            payee=None,
         )
 
         # Check that we have rules with different specificity levels
@@ -150,6 +152,51 @@ class GenerateCategoriesTestCase(TestCase):
         self.assertIn(Decimal("10.18"), amounts)  # At least one with amount
         self.assertIn(None, currencies)  # At least one without currency
         self.assertIn("USD", currencies)  # At least one with currency
+        
+        # All should have category set
+        for rule in rules:
+            self.assertEqual(rule.category, self.category)
+            self.assertIsNone(rule.payee)
+
+    def test_generate_rules_creates_separate_payee_rules(self):
+        """Test that separate rules are created for payee."""
+        rules = generate_categorization_rules(
+            user=self.user,
+            description="PAYPAL *NAMECHEAP",
+            amount=Decimal("10.18"),
+            currency="USD",
+            category=None,
+            payee=self.payee,
+        )
+
+        # Should create 4 rules for payee
+        self.assertEqual(len(rules), 4)
+        
+        # All should have payee set and category None
+        for rule in rules:
+            self.assertEqual(rule.payee, self.payee)
+            self.assertIsNone(rule.category)
+
+    def test_generate_rules_creates_both_category_and_payee_rules(self):
+        """Test that rules are created for both category and payee when both are assigned."""
+        rules = generate_categorization_rules(
+            user=self.user,
+            description="PAYPAL *NAMECHEAP",
+            amount=Decimal("10.18"),
+            currency="USD",
+            category=self.category,
+            payee=self.payee,
+        )
+
+        # Should create 4 rules for category + 4 rules for payee
+        self.assertEqual(len(rules), 8)
+        
+        # Check that we have both types
+        category_rules = [r for r in rules if r.category is not None]
+        payee_rules = [r for r in rules if r.payee is not None]
+        
+        self.assertEqual(len(category_rules), 4)
+        self.assertEqual(len(payee_rules), 4)
 
 
 class FindMatchingRulesTestCase(TestCase):

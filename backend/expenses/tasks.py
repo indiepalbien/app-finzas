@@ -216,3 +216,80 @@ def sync_all_splitwise():
     ids = list(SplitwiseAccount.objects.values_list('user_id', flat=True))
     for uid in ids:
         sync_splitwise_for_user.delay(uid)
+
+
+# ============================================================================
+# Intelligent Categorization Rules Tasks
+# ============================================================================
+
+@shared_task
+def apply_categorization_rules_for_user(user_id, max_transactions=None):
+    """
+    Apply categorization rules to uncategorized transactions for a specific user.
+    
+    This task:
+    1. Finds all uncategorized transactions
+    2. Tries to match them with existing rules
+    3. Applies the best matching rule automatically
+    
+    Args:
+        user_id: ID of the user
+        max_transactions: Maximum number of transactions to process (None = all)
+    """
+    from django.contrib.auth import get_user_model
+    from .rule_engine import apply_rules_to_all_transactions
+    
+    try:
+        User = get_user_model()
+        user = User.objects.get(id=user_id)
+        
+        updated, total = apply_rules_to_all_transactions(user, max_transactions=max_transactions)
+        
+        logger.info(
+            f"Categorization rules applied for user {user.username}: "
+            f"{updated}/{total} transactions categorized"
+        )
+        
+        return {
+            'user_id': user_id,
+            'updated': updated,
+            'total': total,
+            'success': True
+        }
+    except Exception as e:
+        logger.error(f"Error applying categorization rules for user {user_id}: {e}")
+        return {
+            'user_id': user_id,
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def apply_categorization_rules_all_users(max_transactions_per_user=None):
+    """
+    Apply categorization rules to all users.
+    
+    This task spawns individual tasks for each user to parallelize processing.
+    
+    Args:
+        max_transactions_per_user: Max transactions per user (None = all)
+    """
+    from django.contrib.auth import get_user_model
+    
+    User = get_user_model()
+    user_ids = list(User.objects.values_list('id', flat=True))
+    
+    logger.info(f"Starting categorization rules for {len(user_ids)} users")
+    
+    # Spawn individual tasks for each user
+    for user_id in user_ids:
+        apply_categorization_rules_for_user.delay(
+            user_id,
+            max_transactions=max_transactions_per_user
+        )
+    
+    return {
+        'total_users': len(user_ids),
+        'tasks_spawned': len(user_ids)
+    }
