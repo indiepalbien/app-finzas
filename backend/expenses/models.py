@@ -117,6 +117,16 @@ class UserEmailConfig(models.Model):
         mailbox_password = models.CharField(max_length=255, blank=True)
         active = models.BooleanField(default=True)
         created_at = models.DateTimeField(auto_now_add=True)
+        # Gmail forwarding confirmation status
+        forwarding_confirmed = models.BooleanField(
+            default=False,
+            help_text="Si se confirmó el reenvío automático de Gmail"
+        )
+        forwarding_confirmed_at = models.DateTimeField(
+            null=True,
+            blank=True,
+            help_text="Fecha y hora cuando se confirmó el forwarding"
+        )
         # Personal email address used when forwarding invoices
         forwarding_email = models.EmailField(
             blank=True,
