@@ -157,7 +157,25 @@
                     <option value="USD">USD - Dólar</option>
                 </select>
             </div>
+            
+            <div class="bulk-form-group">
+                <label for="source">Fuente *</label>
+                <input type="text" 
+                       name="source" 
+                       id="source" 
+                       list="sourcesList"
+                       placeholder="Ej: Scotia 1234, ITAU Débito..."
+                       required>
+                <small>Selecciona una fuente existente o escribe una nueva. Esta fuente se aplicará a todas las transacciones.</small>
+            </div>
         </div>
+        
+        <!-- Datalist for sources -->
+        <datalist id="sourcesList">
+            {% for source in user_sources %}
+            <option value="{{ source }}">
+            {% endfor %}
+        </datalist>
         
         <div class="bulk-form-group">
             <label for="rawText">Datos de Transacciones *</label>
@@ -263,6 +281,7 @@ function processData() {
     const rawText = document.getElementById('rawText').value.trim();
     const bank = document.getElementById('bank').value.trim();
     const currency = document.getElementById('currency').value.trim();
+    const source = document.getElementById('source').value.trim();
     
     if (!rawText) {
         showError('Please paste some data first.');
@@ -271,6 +290,11 @@ function processData() {
     
     if (!bank) {
         showError('Please select a bank.');
+        return;
+    }
+    
+    if (!source) {
+        showError('Por favor ingresa una fuente.');
         return;
     }
     
@@ -405,9 +429,21 @@ function confirmTransactions() {
         return;
     }
     
-    // Build transactions with category and payee
+    // Get the source from the form
+    const sourceInput = document.getElementById('source');
+    const sourceName = sourceInput ? sourceInput.value.trim() : '';
+    
+    if (!sourceName) {
+        showError('Por favor ingresa una fuente.');
+        return;
+    }
+    
+    // Build transactions with category, payee, and source
     const selectedTransactions = selectedIndices.map(i => {
         const txn = {...parsedTransactions[i]};
+        
+        // Set the user-selected source (same for all transactions)
+        txn.source = sourceName;
         
         // Get category and payee from inputs
         const categoryInput = document.querySelector(`.txn-category[data-index="${i}"]`);

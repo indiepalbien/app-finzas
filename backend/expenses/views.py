@@ -1313,14 +1313,13 @@ def bulk_confirm_view(request):
                     })
                     continue
                 
-                # Get or create source
+                # Get or create source (user-provided from form)
                 source = None
-                if txn["source"]:
-                    # Keep full source name including bank prefix (e.g., "visa:3048")
-                    source_name = txn["source"]
+                source_name = txn_data.get("source")
+                if source_name:
                     source, _ = Source.objects.get_or_create(
                         user=user,
-                        name=source_name
+                        name=source_name.strip()
                     )
                 
                 # Get or create category and payee
