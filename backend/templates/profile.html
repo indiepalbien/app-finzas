@@ -4,6 +4,122 @@
 
 {% block content %}
 
+  {% if is_onboarding and onboarding_step == 5 %}
+  <div class="onboarding-banner">
+    <div class="onboarding-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: 100%;"></div>
+      </div>
+      <p class="step-text">Paso 5 de 5 - ¡Último paso!</p>
+    </div>
+
+    <div class="onboarding-message">
+      <h2>🎉 ¡Ya casi terminamos!</h2>
+      <h3>Paso 5: Tu Panel de Control</h3>
+      <p>Este es tu panel principal donde podrás ver tus transacciones recientes, agregar gastos rápidamente y ver resúmenes por categoría, proyecto y origen.</p>
+      <div class="info-box">
+        <strong>💡 Funciones principales:</strong>
+        <ul style="margin:0.5rem 0 0 1.2rem;padding:0;line-height:1.8;">
+          <li><strong>Añadir transacciones:</strong> Usa el formulario rápido para registrar gastos</li>
+          <li><strong>Ver resúmenes:</strong> Analiza tus gastos por categoría, proyecto u origen</li>
+          <li><strong>Gestionar datos:</strong> Accede a "Mis datos" para configurar todo</li>
+        </ul>
+      </div>
+      <p class="reminder">📝 ¡Estás listo para empezar a usar Cachin! Presiona el botón para completar la configuración.</p>
+      <form method="post" style="margin-top: 1rem;">
+        {% csrf_token %}
+        <input type="hidden" name="onboarding_complete" value="1">
+        <button type="submit" class="btn-primary">¡Comenzar a Usar Cachin! 🚀</button>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    .onboarding-banner {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .onboarding-progress {
+      margin-bottom: 1.5rem;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background-color: rgba(255,255,255,0.3);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background-color: white;
+      transition: width 0.3s ease;
+    }
+
+    .step-text {
+      margin: 0;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .onboarding-message h2 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.8rem;
+    }
+
+    .onboarding-message h3 {
+      margin: 0 0 1rem 0;
+      font-size: 1.3rem;
+      font-weight: normal;
+      opacity: 0.95;
+    }
+
+    .onboarding-message p {
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .info-box {
+      background-color: rgba(255,255,255,0.2);
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      border-left: 4px solid white;
+    }
+
+    .reminder {
+      background-color: rgba(255,255,255,0.15);
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+    }
+
+    .btn-primary {
+      background-color: white;
+      color: #667eea;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+  </style>
+  {% endif %}
+
   <!-- Email automation moved to Manage views -->
 
   <!-- Quick-add compact form -->
