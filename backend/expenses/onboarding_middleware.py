@@ -12,13 +12,14 @@ from .models import UserProfile
 class OnboardingMiddleware:
     """Redirect users to onboarding steps if they haven't completed onboarding."""
     
-    # URLs that are always allowed (authentication, static files)
+    # URLs that are always allowed (authentication, static files, API endpoints)
     ALWAYS_ALLOWED_URLS = [
         '/accounts/login/',
         '/accounts/logout/',
         '/accounts/register/',
         '/static/',
         '/media/',
+        '/expenses/api/',  # Allow HTMX API endpoints to prevent redirect loops
     ]
     
     # Map onboarding steps to URLs
