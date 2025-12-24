@@ -682,14 +682,14 @@ class CategoryListView(OwnerListView):
 
 class CategoryCreateView(OwnerCreateView):
     model = Category
-    fields = ["name"]
+    fields = ["name", "counts_to_total", "description"]
     template_name = "manage/form.html"
     success_url = reverse_lazy("expenses:manage_categories")
 
 
 class CategoryUpdateView(OwnerUpdateView):
     model = Category
-    fields = ["name"]
+    fields = ["name", "counts_to_total", "description"]
     template_name = "manage/form.html"
     success_url = reverse_lazy("expenses:manage_categories")
 
@@ -1580,20 +1580,26 @@ def get_category_expenses(user, month_qs, convert_to_usd=False):
                        If False, use original amounts with currency
 
     Returns:
-        tuple: (cat_expenses, missing_rates)
-            cat_expenses: list of dicts with 'category', 'currency', 'total'
+        tuple: (cat_expenses, missing_rates, subtotals)
+            cat_expenses: list of dicts with 'category', 'currency', 'total', 'counts_to_total'
             missing_rates: count of transactions without exchange rates (only when convert_to_usd=True)
+            subtotals: dict of currency -> subtotal (only for categories where counts_to_total=True)
     """
+    # Get all user categories with counts_to_total flag
+    categories_map = {cat.name: cat.counts_to_total for cat in Category.objects.filter(user=user)}
+
     if convert_to_usd:
         # Convert to USD and group by category
         category_totals = {}
         missing_rates_count = 0
+        subtotal_usd = Decimal('0')
 
         # Select related to avoid N+1 queries
         transactions = month_qs.select_related('category')
 
         for tx in transactions:
             cat_name = tx.category.name if tx.category else 'Sin categoría'
+            counts_to_total = categories_map.get(cat_name, True)  # Default True for 'Sin categoría'
 
             # Use to_usd() method which handles caching
             amount_usd = tx.to_usd()
@@ -1607,32 +1613,45 @@ def get_category_expenses(user, month_qs, convert_to_usd=False):
                 category_totals[cat_name] = Decimal('0')
             category_totals[cat_name] += amount_usd
 
+            # Add to subtotal if category counts
+            if counts_to_total:
+                subtotal_usd += amount_usd
+
         # Convert to list format sorted by total descending
         cat_expenses = [
             {
                 'category': cat_name,
                 'currency': 'USD',
                 'total': str(total.quantize(Decimal('0.01'))),
+                'counts_to_total': categories_map.get(cat_name, True),
             }
             for cat_name, total in sorted(category_totals.items(), key=lambda x: x[1], reverse=True)
         ]
 
-        return cat_expenses, missing_rates_count
+        subtotals = {'USD': str(subtotal_usd.quantize(Decimal('0.01')))}
+        return cat_expenses, missing_rates_count, subtotals
 
     else:
         # Group by category AND currency (keep sign: positive = expense, negative = income)
         category_currency_totals = {}
+        currency_subtotals = {}  # Track subtotal per currency
         transactions = month_qs.select_related('category')
 
         for tx in transactions:
             cat_name = tx.category.name if tx.category else 'Sin categoría'
             currency = tx.currency
             key = (cat_name, currency)
+            counts_to_total = categories_map.get(cat_name, True)
 
             if key not in category_currency_totals:
                 category_currency_totals[key] = Decimal('0')
-            # Keep sign to distinguish income from expenses
             category_currency_totals[key] += tx.amount
+
+            # Add to currency subtotal if category counts
+            if counts_to_total:
+                if currency not in currency_subtotals:
+                    currency_subtotals[currency] = Decimal('0')
+                currency_subtotals[currency] += tx.amount
 
         # Sort by category name, then currency
         cat_expenses = [
@@ -1640,11 +1659,13 @@ def get_category_expenses(user, month_qs, convert_to_usd=False):
                 'category': cat_name,
                 'currency': currency,
                 'total': str(total.quantize(Decimal('0.01'))),
+                'counts_to_total': categories_map.get(cat_name, True),
             }
             for (cat_name, currency), total in sorted(category_currency_totals.items())
         ]
 
-        return cat_expenses, 0
+        subtotals = {curr: str(total.quantize(Decimal('0.01'))) for curr, total in currency_subtotals.items()}
+        return cat_expenses, 0, subtotals
 
 
 @login_required
@@ -1699,7 +1720,7 @@ def api_category_expenses(request):
     ).exclude(amount=0)
 
     # Use helper function to calculate expenses
-    cat_expenses, missing_rates = get_category_expenses(user, month_qs, convert_to_usd)
+    cat_expenses, missing_rates, subtotals = get_category_expenses(user, month_qs, convert_to_usd)
 
     py, pm = prev_month(sel_year, sel_month)
 
@@ -1710,6 +1731,7 @@ def api_category_expenses(request):
         'm_prev': month_str(py, pm),
         'convert_to_usd': convert_to_usd,
         'missing_rates': missing_rates,
+        'subtotals': subtotals,
     }
 
     # HTMX request - return HTML

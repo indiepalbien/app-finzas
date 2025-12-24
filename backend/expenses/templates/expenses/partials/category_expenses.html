@@ -35,12 +35,12 @@
         </thead>
         <tbody>
           {% for row in cat_expenses %}
-            <tr>
+            <tr {% if not row.counts_to_total %}style="opacity:0.6"{% endif %}>
               <td style="padding:.3rem 0;border-bottom:1px dashed var(--border)">
                 {% url 'expenses:edit_category_transactions' as filter_url %}
                 <a href="{{ filter_url }}?category={{ row.category|urlencode }}{% if not convert_to_usd %}&currency={{ row.currency|urlencode }}{% endif %}&month={{ selected_month_str }}"
                    style="color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)">
-                  {{ row.category }}
+                  {{ row.category }}{% if not row.counts_to_total %} <small style="color:#999">(no cuenta)</small>{% endif %}
                 </a>
               </td>
               {% if not convert_to_usd %}
@@ -52,6 +52,23 @@
             </tr>
           {% endfor %}
         </tbody>
+        <tfoot>
+          <tr style="border-top:2px solid var(--border);font-weight:700;">
+            <td style="padding:.5rem 0">Subtotal del mes</td>
+            {% if not convert_to_usd %}
+              <td></td>
+            {% endif %}
+            <td style="padding:.5rem 0;text-align:right">
+              {% if convert_to_usd %}
+                $ {{ subtotals.USD|default:"0.00" }}
+              {% else %}
+                {% for currency, amount in subtotals.items %}
+                  {{ currency }} {{ amount }}{% if not forloop.last %}<br>{% endif %}
+                {% endfor %}
+              {% endif %}
+            </td>
+          </tr>
+        </tfoot>
       </table>
     {% else %}
       <p style="padding:.3rem 0">Sin gastos en este mes.</p>

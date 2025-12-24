@@ -133,6 +133,8 @@
     {% for obj in object_list %}
       <li>
         {{ obj }}
+        {% if obj.counts_to_total == False %}<small style="color:#666;margin-left:0.5rem">(no cuenta en subtotal)</small>{% endif %}
+        {% if obj.description %}<br><small style="color:#666">{{ obj.description }}</small>{% endif %}
         {% if obj.external_id %}<br><small>ID: {{ obj.external_id }}</small>{% endif %}
         {% if obj.reason %}<br><small>Motivo: {{ obj.reason }}</small>{% endif %}
         {% if obj.payload %}<br><small>Payload: {{ obj.payload }}</small>{% endif %}
