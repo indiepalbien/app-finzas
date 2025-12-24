@@ -160,6 +160,12 @@ class UserEmailMessage(models.Model):
     downloaded_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
     processing_error = models.TextField(blank=True)
+    gmail_confirmation_link = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True,
+        help_text="Gmail forwarding confirmation link for user to click"
+    )
 
     class Meta:
         unique_together = ("user", "message_id")
