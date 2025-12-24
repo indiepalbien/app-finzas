@@ -24,6 +24,90 @@
       @media(min-width:960px){
         #quick-add .qa-grid{grid-template-columns:repeat(4,1fr)}
       }
+      @media (max-width:640px) {
+        #quick-add .qa-grid {
+          grid-template-columns: 1fr;
+        }
+        #quick-add .qa-grid button {
+          padding: 0.75rem 1rem;
+          font-size: 1rem;
+        }
+
+        /* Recent transactions mobile layout */
+        #recent-transactions ul li {
+          display: flex !important;
+          flex-wrap: wrap !important;
+          gap: 0.25rem !important;
+          padding: 0.5rem !important;
+          background: #fff;
+          border: 2px solid var(--border) !important;
+          border-radius: 4px;
+          margin-bottom: 0.5rem !important;
+          position: relative;
+        }
+
+        #recent-transactions ul li a {
+          position: absolute !important;
+          top: 0.5rem;
+          right: 0.5rem;
+          width: 32px !important;
+          height: 32px !important;
+          padding: 0 !important;
+          background: var(--accent);
+          color: #fff;
+          border-radius: 3px;
+          font-size: 1rem;
+          text-decoration: none;
+          display: flex !important;
+          align-items: center;
+          justify-content: center;
+        }
+
+        #recent-transactions ul li span {
+          width: auto !important;
+          min-width: 0 !important;
+          text-align: left !important;
+          line-height: 1.4;
+        }
+
+        #recent-transactions ul li span:nth-of-type(1) {
+          flex: 0 0 calc(100% - 40px);
+          font-weight: 600;
+          font-size: 0.95rem;
+          color: var(--muted);
+        }
+
+        #recent-transactions ul li span:nth-of-type(2) {
+          flex: 0 0 auto;
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: var(--accent);
+        }
+
+        #recent-transactions ul li span:nth-of-type(3) {
+          flex: 0 0 auto;
+          font-size: 0.85rem;
+          color: var(--muted);
+          text-transform: uppercase;
+        }
+
+        #recent-transactions ul li span:nth-of-type(4) {
+          flex: 0 0 100%;
+          font-size: 0.8rem;
+          color: #666;
+        }
+
+        /* Pagination mobile */
+        #recent-transactions > div[style*="justify-content"] {
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+      }
+      @media (max-width:768px) and (min-width:641px) {
+        #quick-add .qa-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
     </style>
     <form id="quick-add-form"
           hx-post="{% url 'expenses:quick_transaction' %}"

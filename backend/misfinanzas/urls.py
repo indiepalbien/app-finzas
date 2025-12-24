@@ -29,6 +29,8 @@ urlpatterns = [
     path('expenses/', include('expenses.urls')),
     path('accounts/register/', expenses_views.register, name='register'),
     path('accounts/', include('django.contrib.auth.urls')),
+    # PWA URLs (manifest, service worker)
+    path('', include(('pwa.urls', 'pwa'), namespace='pwa')),
     # Serve a minimal robots.txt to avoid 404 noise
     path('robots.txt', TemplateView.as_view(
         template_name='robots.txt', content_type='text/plain'

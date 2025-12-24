@@ -4,6 +4,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#ff0066">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cachin">
+    <link rel="manifest" href="{% url 'pwa:manifest' %}">
+    <link rel="apple-touch-icon" href="{% static 'expenses/images/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'expenses/images/icon-192x192.png' %}">
     <title>{% block title %}App-Finanzas{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'expenses/style.css' %}">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -12,16 +20,28 @@
     <header>
       <nav class="nav">
         <a class="brand" href="/">Cachin</a>
-        <div class="nav-links">
-          {% if user.is_authenticated %}
-            <span>Hola, {{ user.username }}</span>
-            <a href="{% url 'profile' %}">Mi perfil</a>
-            <a href="{% url 'expenses:manage_dashboard' %}">Mis datos</a>
-            <a href="{% url 'logout' %}">Cerrar sesión</a>
-          {% else %}
-            <a href="{% url 'login' %}">Ingresar</a>
-            <a href="{% url 'register' %}">Registrarse</a>
-          {% endif %}
+
+        <!-- Hamburger Button (mobile only) -->
+        <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
+
+        <!-- Navigation Links (desktop + mobile drawer) -->
+        <div class="nav-links" id="nav-links">
+          <div class="nav-overlay" id="nav-overlay"></div>
+          <div class="nav-drawer">
+            {% if user.is_authenticated %}
+              <div class="nav-user">Hola, {{ user.username }}</div>
+              <a href="{% url 'profile' %}">Mi perfil</a>
+              <a href="{% url 'expenses:manage_dashboard' %}">Mis datos</a>
+              <a href="{% url 'logout' %}">Cerrar sesión</a>
+            {% else %}
+              <a href="{% url 'login' %}">Ingresar</a>
+              <a href="{% url 'register' %}">Registrarse</a>
+            {% endif %}
+          </div>
         </div>
       </nav>
     </header>
@@ -52,6 +72,51 @@
           }
         }
       });
+
+      // Mobile menu toggle
+      (function() {
+        const menuToggle = document.getElementById('menu-toggle');
+        const navLinks = document.getElementById('nav-links');
+        const navOverlay = document.getElementById('nav-overlay');
+
+        if (menuToggle && navLinks && navOverlay) {
+          menuToggle.addEventListener('click', function() {
+            const isActive = navLinks.classList.contains('active');
+            if (isActive) {
+              closeMenu();
+            } else {
+              openMenu();
+            }
+          });
+
+          navOverlay.addEventListener('click', closeMenu);
+
+          const navDrawerLinks = navLinks.querySelectorAll('.nav-drawer a');
+          navDrawerLinks.forEach(link => link.addEventListener('click', closeMenu));
+
+          function openMenu() {
+            navLinks.classList.add('active');
+            menuToggle.classList.add('active');
+            menuToggle.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+          }
+
+          function closeMenu() {
+            navLinks.classList.remove('active');
+            menuToggle.classList.remove('active');
+            menuToggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+          }
+
+          let resizeTimer;
+          window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+              if (window.innerWidth > 640) closeMenu();
+            }, 250);
+          });
+        }
+      })();
     </script>
   </body>
 </html>

@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_htmx',
+    'pwa',
 ]
 
 MIDDLEWARE = [
@@ -323,3 +324,24 @@ AXES_USE_USER_AGENT = True
 
 SPLITWISE_CONSUMER_KEY = os.getenv('SPLITWISE_CONSUMER_KEY', '')
 SPLITWISE_CONSUMER_SECRET = os.getenv('SPLITWISE_CONSUMER_SECRET', '')
+
+# PWA Configuration
+PWA_APP_NAME = 'Cachin'
+PWA_APP_DESCRIPTION = 'Seguimiento de finanzas personales'
+PWA_APP_THEME_COLOR = '#ff0066'
+PWA_APP_BACKGROUND_COLOR = '#f6f7f8'
+PWA_APP_DISPLAY = 'standalone'
+PWA_APP_SCOPE = '/'
+PWA_APP_ORIENTATION = 'portrait-primary'
+PWA_APP_START_URL = '/user/'
+PWA_APP_STATUS_BAR_COLOR = '#ff0066'
+PWA_APP_ICONS = [
+    {'src': '/static/expenses/images/icon-192x192.png', 'sizes': '192x192', 'type': 'image/png'},
+    {'src': '/static/expenses/images/icon-512x512.png', 'sizes': '512x512', 'type': 'image/png'}
+]
+PWA_APP_ICONS_APPLE = [
+    {'src': '/static/expenses/images/apple-touch-icon.png', 'sizes': '180x180'}
+]
+PWA_APP_DIR = 'ltr'
+PWA_APP_LANG = 'es-ES'
+PWA_SERVICE_WORKER_PATH = '/static/serviceworker.js'

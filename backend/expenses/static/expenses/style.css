@@ -182,12 +182,151 @@ form input[type="password"]:focus {
     font-style: italic;
 }
 
-/* Small screens adjustments */
+/* ==== MOBILE NAVIGATION ==== */
+
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: transparent;
+  border: 3px solid var(--border);
+  padding: 8px 10px;
+  cursor: pointer;
+  z-index: 1001;
+  transition: all 0.3s ease;
+}
+
+.menu-toggle:hover {
+  background: var(--accent);
+}
+
+.menu-toggle:hover .hamburger-line {
+  background: #fff;
+}
+
+.hamburger-line {
+  width: 24px;
+  height: 3px;
+  background: var(--border);
+  transition: all 0.3s ease;
+  display: block;
+}
+
+.menu-toggle.active .hamburger-line:nth-child(1) {
+  transform: rotate(45deg) translate(7px, 7px);
+}
+
+.menu-toggle.active .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle.active .hamburger-line:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -7px);
+}
+
+.nav-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.nav-drawer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.nav-user {
+  padding: 0.35rem 0.6rem;
+  border: 2px dashed var(--border);
+}
+
+/* Mobile screens */
 @media (max-width:640px){
-    .nav{flex-direction:column;align-items:flex-start}
-    .nav .nav-links{width:100%;justify-content:space-between}
-    .container{margin:1rem;padding:1rem}
-    .login-container{max-width:100%}
+  .nav {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .menu-toggle {
+    display: flex;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 280px;
+    height: 100%;
+    background: var(--panel);
+    border-left: 6px solid var(--border);
+    box-shadow: -8px 0 0 rgba(0,0,0,0.06);
+    z-index: 1000;
+    transition: right 0.3s ease;
+  }
+
+  .nav-links.active {
+    right: 0;
+  }
+
+  .nav-links.active .nav-overlay {
+    display: block;
+    opacity: 1;
+  }
+
+  .nav-drawer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 4rem 1.5rem 1.5rem;
+    height: 100%;
+    position: relative;
+    z-index: 1001;
+  }
+
+  .nav-drawer a,
+  .nav-drawer .nav-user {
+    display: block;
+    width: 100%;
+    padding: 0.9rem 1rem;
+    text-decoration: none;
+    color: var(--muted);
+    border: 3px solid var(--border);
+    background: #fff;
+    margin-bottom: 0.75rem;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+
+  .nav-drawer a:hover {
+    background: var(--accent);
+    color: #fff;
+    transform: translateX(-4px);
+  }
+
+  .nav-drawer .nav-user {
+    background: #fff;
+    border-style: dashed;
+    border-width: 2px;
+    font-weight: 400;
+  }
+
+  .container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  .login-container {
+    max-width: 100%;
+  }
 }
 
 /* ==== Autosave Status Indicators ==== */
@@ -294,5 +433,83 @@ textarea[hx-post]:focus + div.save-status .status-text::before {
 /* Hide typing indicator during HTMX request (saving state takes over) */
 textarea[hx-post].htmx-request + div.save-status .status-text::before {
   content: none;
+}
+
+/* ==== MOBILE FORM IMPROVEMENTS ==== */
+
+@media (max-width:640px) {
+  /* Touch-friendly form fields */
+  form input[type="text"],
+  form input[type="email"],
+  form input[type="password"],
+  form input[type="date"],
+  form input[type="number"],
+  form select,
+  form textarea {
+    padding: 0.75rem;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  /* Full-width buttons */
+  form button,
+  form input[type="submit"],
+  .btn-primary {
+    padding: 0.85rem 1.2rem;
+    font-size: 1rem;
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Touch-friendly links */
+  a {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Headings */
+  h1 {
+    font-size: 1.4rem;
+    margin-bottom: 0.75rem;
+  }
+
+  h2 {
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Section spacing */
+  section {
+    margin: 0.75rem 0 !important;
+    padding: 0.75rem !important;
+  }
+
+  /* Messages */
+  .messages {
+    margin-bottom: 0.75rem;
+  }
+
+  .message {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  /* Reduced animations for performance */
+  .save-status,
+  .spinner,
+  button,
+  a {
+    transition-duration: 0.15s !important;
+  }
 }
 

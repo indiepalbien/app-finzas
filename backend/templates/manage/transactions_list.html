@@ -3,6 +3,167 @@
 
 {% block title %}Transacciones{% endblock %}
 
+<style>
+/* Transaction card */
+.tx-card {
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+/* Desktop: 4-column layout */
+.tx-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.tx-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.tx-field select {
+  width: 100%;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.9rem;
+  border: 2px solid var(--border);
+  background: #fff;
+  font-family: inherit;
+}
+
+.tx-comment-row {
+  margin-top: 0.5rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.tx-comment-field textarea {
+  width: 100%;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.9rem;
+  border: 2px solid var(--border);
+  background: #fff;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.tx-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Tablet: 2-column compact */
+@media (max-width:960px) and (min-width:641px) {
+  .tx-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .tx-info {
+    grid-column: 1 / -1;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed var(--accent);
+  }
+
+  .tx-field:nth-of-type(3) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Mobile: stacked with 2-col fields */
+@media (max-width:640px) {
+  .tx-card {
+    padding: 0.75rem;
+  }
+
+  .tx-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .tx-info {
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .tx-info strong {
+    font-size: 1rem;
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+
+  .tx-info div {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .tx-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .tx-field label {
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .tx-field select {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.35rem;
+  }
+
+  @media (max-width:380px) {
+    .tx-fields-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .tx-comment-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .tx-actions {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tx-actions button {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .save-status {
+    font-size: 0.75rem;
+    min-height: 1.2rem;
+  }
+
+  /* Filter section */
+  section form[method="get"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  section form[method="get"] button,
+  section form[method="get"] a {
+    width: 100%;
+    text-align: center;
+  }
+}
+</style>
+
 {% block content %}
 <p><a href="{% url 'profile' %}">← Volver al perfil</a></p>
 <h1>Transacciones</h1>
@@ -76,13 +237,14 @@
     <p style="margin-top:0;color:var(--muted);">Mostrando {{ page_obj.object_list|length }} de {{ page_obj.paginator.count }}.</p>
     <div style="display:grid;grid-template-columns:1fr;gap:0.75rem;">
       {% for tx in page_obj %}
-        <form id="tx-{{ tx.id }}" action="" method="post" style="padding:0.6rem;border:1px solid var(--border);background:#fff;">
+        <form id="tx-{{ tx.id }}" action="" method="post" class="tx-card">
           {% csrf_token %}
           <input type="hidden" name="action" value="update_tx">
           <input type="hidden" name="tx_id" value="{{ tx.id }}">
-          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0.5rem;align-items:start;">
+
+          <div class="tx-grid">
             <!-- Transaction Info -->
-            <div>
+            <div class="tx-info">
               <strong>{{ tx.description }}</strong>
               <div style="font-size:0.9rem;color:var(--muted);margin-top:0.25rem;">
                 {{ tx.date }} · {{ tx.currency }} {{ tx.amount }}
@@ -90,68 +252,64 @@
               </div>
             </div>
 
-            <!-- Category -->
-            <div>
-              <label style="display:block;font-weight:600;margin-bottom:0.25rem;font-size:0.9rem;">Categoría</label>
-              <select name="category_id"
-                      style="width:100%;padding:0.35rem 0.45rem;font-size:0.9rem;"
-                      hx-post="{% url 'expenses:manage_transactions' %}"
-                      hx-include="[name='tx_id'],[name='action'],[name='source_id'],[name='project_id'],[name='comments']"
-                      hx-trigger="change"
-                      hx-target="#save-status-{{ tx.id }}"
-                      hx-swap="innerHTML"
-                      hx-indicator="#save-status-{{ tx.id }}">
-                <option value="">Sin categoría</option>
-                {% for cat in categories %}
-                  <option value="{{ cat.id }}" {% if tx.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
+            <!-- Fields Grid -->
+            <div class="tx-fields-grid">
+              <div class="tx-field">
+                <label>Categoría</label>
+                <select name="category_id"
+                        hx-post="{% url 'expenses:manage_transactions' %}"
+                        hx-include="[name='tx_id'],[name='action'],[name='source_id'],[name='project_id'],[name='comments']"
+                        hx-trigger="change"
+                        hx-target="#save-status-{{ tx.id }}"
+                        hx-swap="innerHTML"
+                        hx-indicator="#save-status-{{ tx.id }}">
+                  <option value="">Sin categoría</option>
+                  {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if tx.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
 
-            <!-- Source -->
-            <div>
-              <label style="display:block;font-weight:600;margin-bottom:0.25rem;font-size:0.9rem;">Origen</label>
-              <select name="source_id"
-                      style="width:100%;padding:0.35rem 0.45rem;font-size:0.9rem;"
-                      hx-post="{% url 'expenses:manage_transactions' %}"
-                      hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='project_id'],[name='comments']"
-                      hx-trigger="change"
-                      hx-target="#save-status-{{ tx.id }}"
-                      hx-swap="innerHTML"
-                      hx-indicator="#save-status-{{ tx.id }}">
-                <option value="">Sin origen</option>
-                {% for src in sources %}
-                  <option value="{{ src.id }}" {% if tx.source_id == src.id %}selected{% endif %}>{{ src.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
+              <div class="tx-field">
+                <label>Origen</label>
+                <select name="source_id"
+                        hx-post="{% url 'expenses:manage_transactions' %}"
+                        hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='project_id'],[name='comments']"
+                        hx-trigger="change"
+                        hx-target="#save-status-{{ tx.id }}"
+                        hx-swap="innerHTML"
+                        hx-indicator="#save-status-{{ tx.id }}">
+                  <option value="">Sin origen</option>
+                  {% for src in sources %}
+                    <option value="{{ src.id }}" {% if tx.source_id == src.id %}selected{% endif %}>{{ src.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
 
-            <!-- Project -->
-            <div>
-              <label style="display:block;font-weight:600;margin-bottom:0.25rem;font-size:0.9rem;">Proyecto</label>
-              <select name="project_id"
-                      style="width:100%;padding:0.35rem 0.45rem;font-size:0.9rem;"
-                      hx-post="{% url 'expenses:manage_transactions' %}"
-                      hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='source_id'],[name='comments']"
-                      hx-trigger="change"
-                      hx-target="#save-status-{{ tx.id }}"
-                      hx-swap="innerHTML"
-                      hx-indicator="#save-status-{{ tx.id }}">
-                <option value="">Sin proyecto</option>
-                {% for proj in projects %}
-                  <option value="{{ proj.id }}" {% if tx.project_id == proj.id %}selected{% endif %}>{{ proj.name }}</option>
-                {% endfor %}
-              </select>
+              <div class="tx-field">
+                <label>Proyecto</label>
+                <select name="project_id"
+                        hx-post="{% url 'expenses:manage_transactions' %}"
+                        hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='source_id'],[name='comments']"
+                        hx-trigger="change"
+                        hx-target="#save-status-{{ tx.id }}"
+                        hx-swap="innerHTML"
+                        hx-indicator="#save-status-{{ tx.id }}">
+                  <option value="">Sin proyecto</option>
+                  {% for proj in projects %}
+                    <option value="{{ proj.id }}" {% if tx.project_id == proj.id %}selected{% endif %}>{{ proj.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
           </div>
 
           <!-- Comments Row -->
-          <div style="margin-top:0.5rem;display:grid;grid-template-columns:1fr auto;gap:0.5rem;align-items:end;">
-            <div>
-              <label style="display:block;font-weight:600;margin-bottom:0.25rem;font-size:0.9rem;">Comentario</label>
+          <div class="tx-comment-row">
+            <div class="tx-comment-field">
+              <label>Comentario</label>
               <textarea name="comments"
                         rows="2"
-                        style="width:100%;padding:0.35rem 0.45rem;font-size:0.9rem;"
                         hx-post="{% url 'expenses:manage_transactions' %}"
                         hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='source_id'],[name='project_id']"
                         hx-trigger="input changed delay:1s"
@@ -159,7 +317,7 @@
                         hx-swap="innerHTML"
                         hx-indicator="#save-status-{{ tx.id }}">{{ tx.comments }}</textarea>
             </div>
-            <div style="display:flex;gap:0.5rem;flex-direction:column;align-items:stretch;">
+            <div class="tx-actions">
               <div id="save-status-{{ tx.id }}" class="save-status" style="min-height:1.5rem;text-align:right">
                 <span class="spinner htmx-indicator"></span>
                 <span class="status-text"></span>
@@ -171,7 +329,7 @@
                       hx-confirm="¿Estás seguro de eliminar esta transacción?"
                       hx-target="#tx-{{ tx.id }}"
                       hx-swap="outerHTML swap:300ms"
-                      style="background:#dc2626;color:white;border:1px solid #b91c1c;white-space:nowrap;">Eliminar</button>
+                      style="background:#dc2626;color:white;border:1px solid #b91c1c;white-space:nowrap;padding:0.5rem 0.75rem;">Eliminar</button>
             </div>
           </div>
         </form>
