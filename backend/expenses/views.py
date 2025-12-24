@@ -919,17 +919,34 @@ class TransactionListView(OwnerListView):
         ).order_by('-date', '-id')
 
         # Apply filters from query parameters
+        # Special value "__null__" means filter by null/empty
         category = self.request.GET.get('category')
         if category:
-            qs = qs.filter(category__name=category)
+            if category == '__null__':
+                qs = qs.filter(category__isnull=True)
+            else:
+                qs = qs.filter(category__name=category)
 
         source = self.request.GET.get('source')
         if source:
-            qs = qs.filter(source__name=source)
+            if source == '__null__':
+                qs = qs.filter(source__isnull=True)
+            else:
+                qs = qs.filter(source__name=source)
 
         project = self.request.GET.get('project')
         if project:
-            qs = qs.filter(project__name=project)
+            if project == '__null__':
+                qs = qs.filter(project__isnull=True)
+            else:
+                qs = qs.filter(project__name=project)
+
+        payee = self.request.GET.get('payee')
+        if payee:
+            if payee == '__null__':
+                qs = qs.filter(payee__isnull=True)
+            else:
+                qs = qs.filter(payee__name=payee)
 
         currency = self.request.GET.get('currency')
         if currency:
@@ -960,11 +977,12 @@ class TransactionListView(OwnerListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
-        # Get all categories, sources, projects for filters
+        # Get all categories, sources, projects, payees for filters
         user = self.request.user
         ctx['categories'] = Category.objects.filter(user=user).order_by('name')
         ctx['sources'] = Source.objects.filter(user=user).order_by('name')
         ctx['projects'] = Project.objects.filter(user=user).order_by('name')
+        ctx['payees'] = Payee.objects.filter(user=user).order_by('name')
 
         # Get distinct currencies
         ctx['currencies'] = (
@@ -979,6 +997,7 @@ class TransactionListView(OwnerListView):
             'category': self.request.GET.get('category', ''),
             'source': self.request.GET.get('source', ''),
             'project': self.request.GET.get('project', ''),
+            'payee': self.request.GET.get('payee', ''),
             'currency': self.request.GET.get('currency', ''),
             'date_from': self.request.GET.get('date_from', ''),
             'date_to': self.request.GET.get('date_to', ''),

@@ -180,6 +180,7 @@
       <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Categoría</label>
       <select name="category" style="width:100%;padding:0.45rem 0.55rem;">
         <option value="">Todas</option>
+        <option value="__null__" {% if current_filters.category == '__null__' %}selected{% endif %}>❌ Sin categoría</option>
         {% for cat in categories %}
           <option value="{{ cat.name }}" {% if current_filters.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
         {% endfor %}
@@ -189,6 +190,7 @@
       <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Origen</label>
       <select name="source" style="width:100%;padding:0.45rem 0.55rem;">
         <option value="">Todos</option>
+        <option value="__null__" {% if current_filters.source == '__null__' %}selected{% endif %}>❌ Sin origen</option>
         {% for src in sources %}
           <option value="{{ src.name }}" {% if current_filters.source == src.name %}selected{% endif %}>{{ src.name }}</option>
         {% endfor %}
@@ -198,8 +200,19 @@
       <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Proyecto</label>
       <select name="project" style="width:100%;padding:0.45rem 0.55rem;">
         <option value="">Todos</option>
+        <option value="__null__" {% if current_filters.project == '__null__' %}selected{% endif %}>❌ Sin proyecto</option>
         {% for proj in projects %}
           <option value="{{ proj.name }}" {% if current_filters.project == proj.name %}selected{% endif %}>{{ proj.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Beneficiario</label>
+      <select name="payee" style="width:100%;padding:0.45rem 0.55rem;">
+        <option value="">Todos</option>
+        <option value="__null__" {% if current_filters.payee == '__null__' %}selected{% endif %}>❌ Sin beneficiario</option>
+        {% for p in payees %}
+          <option value="{{ p.name }}" {% if current_filters.payee == p.name %}selected{% endif %}>{{ p.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -341,7 +354,7 @@
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border);">
         <div>
           {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.source %}&source={{ current_filters.source }}{% endif %}{% if current_filters.project %}&project={{ current_filters.project }}{% endif %}{% if current_filters.currency %}&currency={{ current_filters.currency }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}">« Anterior</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.source %}&source={{ current_filters.source }}{% endif %}{% if current_filters.project %}&project={{ current_filters.project }}{% endif %}{% if current_filters.payee %}&payee={{ current_filters.payee }}{% endif %}{% if current_filters.currency %}&currency={{ current_filters.currency }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}">« Anterior</a>
           {% endif %}
         </div>
         <div>
@@ -349,7 +362,7 @@
         </div>
         <div>
           {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.source %}&source={{ current_filters.source }}{% endif %}{% if current_filters.project %}&project={{ current_filters.project }}{% endif %}{% if current_filters.currency %}&currency={{ current_filters.currency }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}">Siguiente »</a>
+            <a href="?page={{ page_obj.next_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.source %}&source={{ current_filters.source }}{% endif %}{% if current_filters.project %}&project={{ current_filters.project }}{% endif %}{% if current_filters.payee %}&payee={{ current_filters.payee }}{% endif %}{% if current_filters.currency %}&currency={{ current_filters.currency }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}">Siguiente »</a>
           {% endif %}
         </div>
       </div>
