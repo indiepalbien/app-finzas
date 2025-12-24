@@ -2,7 +2,6 @@ import logging
 from datetime import date
 from email.utils import parseaddr
 from typing import Optional
-import requests
 
 from django.db import transaction, IntegrityError
 from django.utils import timezone
@@ -53,30 +52,15 @@ def process_new_messages() -> int:
                     confirmation_link = parsed_gmail.get("confirmation_link")
                     
                     if confirmation_link:
-                        logger.info("🔗 Confirming forwarding link: %s", confirmation_link[:80])
-                        response = requests.get(confirmation_link, timeout=10)
-                        
-                        if response.status_code == 200:
-                            # Update UserEmailConfig to mark forwarding as confirmed
-                            email_config = UserEmailConfig.objects.filter(
-                                user=msg.user,
-                                active=True
-                            ).first()
-                            
-                            if email_config:
-                                email_config.forwarding_confirmed = True
-                                email_config.forwarding_confirmed_at = timezone.now()
-                                email_config.save(update_fields=["forwarding_confirmed", "forwarding_confirmed_at"])
-                                logger.info("✅ Gmail forwarding CONFIRMED for user=%s", msg.user_id)
-                            else:
-                                logger.warning("⚠️  No active UserEmailConfig found for user=%s", msg.user_id)
-                        else:
-                            logger.error("❌ Confirmation request failed with status=%s", response.status_code)
+                        logger.info("🔗 Storing forwarding confirmation link: %s", confirmation_link[:80])
+                        # Store the link instead of clicking it automatically
+                        msg.gmail_confirmation_link = confirmation_link
+                        logger.info("✅ Gmail forwarding link stored for user=%s to click manually", msg.user_id)
                     else:
                         logger.warning("⚠️  No confirmation link found in Gmail forwarding email")
                     
                     msg.processed_at = timezone.now()
-                    msg.save(update_fields=["processed_at"])
+                    msg.save(update_fields=["gmail_confirmation_link", "processed_at"])
                     count += 1
                     continue
                     
