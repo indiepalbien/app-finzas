@@ -51,16 +51,18 @@ def process_new_messages() -> int:
                     parsed_gmail = parse_gmail_forwarding_email(bytes(msg.raw_eml))
                     confirmation_link = parsed_gmail.get("confirmation_link")
                     
+                    update_fields = ["processed_at"]
                     if confirmation_link:
                         logger.info("🔗 Storing forwarding confirmation link: %s", confirmation_link[:80])
                         # Store the link instead of clicking it automatically
                         msg.gmail_confirmation_link = confirmation_link
+                        update_fields.append("gmail_confirmation_link")
                         logger.info("✅ Gmail forwarding link stored for user=%s to click manually", msg.user_id)
                     else:
                         logger.warning("⚠️  No confirmation link found in Gmail forwarding email")
                     
                     msg.processed_at = timezone.now()
-                    msg.save(update_fields=["gmail_confirmation_link", "processed_at"])
+                    msg.save(update_fields=update_fields)
                     count += 1
                     continue
                     
