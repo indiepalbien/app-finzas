@@ -289,6 +289,35 @@ class Transaction(models.Model):
         return calculated
 
 
+class Stock(models.Model):
+    """Stock trade record from brokerage (e.g., Interactive Brokers)."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    date = models.DateField()
+    symbol = models.CharField(max_length=20, help_text="Stock ticker symbol")
+    bought = models.BooleanField(help_text="True for buy, False for sell")
+    amount = models.DecimalField(max_digits=14, decimal_places=6, help_text="Number of shares")
+    unitprice = models.DecimalField(max_digits=14, decimal_places=4, help_text="Price per share in USD")
+    external_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    transaction = models.ForeignKey(Transaction, on_delete=models.SET_NULL, null=True, blank=True,
+                                    help_text="Corresponding cash transaction")
+
+    def __str__(self):
+        action = "BUY" if self.bought else "SELL"
+        return f"{self.date} {action} {self.amount} {self.symbol} @ ${self.unitprice}"
+
+    @property
+    def total_value(self):
+        """Total value of the trade in USD."""
+        return self.amount * self.unitprice
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "date", "id"], name="stock_user_date_id"),
+            models.Index(fields=["user", "symbol"], name="stock_user_symbol"),
+        ]
+        ordering = ["-date", "-id"]
+
+
 class PendingTransaction(models.Model):
     """Queue of transactions that could not be auto-inserted (e.g., duplicates)."""
 
