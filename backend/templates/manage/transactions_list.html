@@ -4,154 +4,234 @@
 {% block title %}Transacciones{% endblock %}
 
 <style>
-/* Transaction card */
+/* Transaction card - máxima compactación */
 .tx-card {
-  padding: 0.6rem;
-  border: 1px solid var(--border);
+  padding: 0.25rem 0.3rem;
+  border: 1px solid #e0e0e0;
   background: #fff;
+  margin-bottom: 0.25rem;
+  font-size: 0.7rem;
+  line-height: 1.1;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  position: relative;
 }
 
-/* Desktop: 4-column layout */
-.tx-grid {
+/* Desktop: 2 columnas */
+.tx-list {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 0.5rem;
-  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 0.4rem;
+}
+
+.tx-card * {
+  font-family: inherit;
+}
+
+/* Header compacto: ID + fecha + descripción (2 líneas) + monto */
+.tx-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.3rem;
+  margin-bottom: 0.25rem;
+}
+
+.tx-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tx-meta {
+  font-size: 0.62rem;
+  color: #666;
+  margin-bottom: 0.05rem;
+}
+
+.tx-id {
+  font-weight: 700;
+  margin-right: 0.3rem;
+}
+
+.tx-desc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: #111;
+}
+
+.tx-amount {
+  font-weight: 700;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: #111;
+}
+
+/* Campos: grid compacto 2 columnas */
+.tx-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem;
+  margin-bottom: 0.2rem;
+}
+
+.tx-field {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
 }
 
 .tx-field label {
-  display: block;
+  font-size: 0.6rem;
   font-weight: 600;
-  margin-bottom: 0.25rem;
-  font-size: 0.9rem;
+  opacity: 0.7;
+  white-space: nowrap;
 }
 
 .tx-field select {
-  width: 100%;
-  padding: 0.35rem 0.45rem;
-  font-size: 0.9rem;
-  border: 2px solid var(--border);
+  flex: 1;
+  padding: 0.15rem 0.2rem;
+  font-size: 0.68rem;
+  border: 1px solid #ddd;
   background: #fff;
   font-family: inherit;
+  min-height: 1.4rem;
+  line-height: 1;
 }
 
-.tx-comment-row {
-  margin-top: 0.5rem;
+/* Footer: nota + eliminar colapsados */
+.tx-footer {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 0.5rem;
-  align-items: end;
+  gap: 0.2rem;
+  align-items: center;
 }
 
-.tx-comment-field textarea {
-  width: 100%;
-  padding: 0.35rem 0.45rem;
-  font-size: 0.9rem;
-  border: 2px solid var(--border);
-  background: #fff;
-  font-family: inherit;
-  resize: vertical;
-}
-
-.tx-actions {
+.tx-comment {
   display: flex;
-  gap: 0.5rem;
-  flex-direction: column;
-  align-items: stretch;
+  align-items: center;
+  gap: 0.15rem;
 }
 
-/* Tablet: 2-column compact */
-@media (max-width:960px) and (min-width:641px) {
-  .tx-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-  }
-
-  .tx-info {
-    grid-column: 1 / -1;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px dashed var(--accent);
-  }
-
-  .tx-field:nth-of-type(3) {
-    grid-column: 1 / -1;
-  }
+.tx-comment label {
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
-/* Mobile: stacked with 2-col fields */
-@media (max-width:640px) {
+.tx-comment textarea {
+  flex: 1;
+  padding: 0.15rem 0.2rem;
+  font-size: 0.65rem;
+  border: 1px solid #ddd;
+  background: #fafafa;
+  font-family: inherit;
+  resize: none;
+  min-height: 1.4rem;
+  line-height: 1.2;
+}
+
+.save-status {
+  font-size: 0.55rem;
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  opacity: 0.6;
+}
+
+.delete-btn {
+  padding: 0.15rem 0.25rem !important;
+  font-size: 0.9rem !important;
+  line-height: 1 !important;
+  white-space: nowrap;
+  min-width: 35px;
+}
+
+/* Mobile: 2 COLUMNAS con diseño aún más compacto */
+@media (max-width: 640px) {
+  .tx-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.25rem;
+  }
+  
   .tx-card {
-    padding: 0.75rem;
+    padding: 0.2rem 0.25rem;
+    margin-bottom: 0;
+    font-size: 0.65rem;
   }
-
-  .tx-grid {
+  
+  .tx-header {
+    gap: 0.2rem;
+    margin-bottom: 0.2rem;
+  }
+  
+  .tx-meta {
+    font-size: 0.58rem;
+  }
+  
+  .tx-desc {
+    font-size: 0.68rem;
+  }
+  
+  .tx-amount {
+    font-size: 0.7rem;
+  }
+  
+  /* Campos en 1 columna en móvil */
+  .tx-fields {
     grid-template-columns: 1fr;
-    gap: 0.75rem;
+    gap: 0.15rem;
+    margin-bottom: 0.15rem;
   }
-
-  .tx-info {
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid var(--accent);
-    margin-bottom: 0.5rem;
+  
+  .tx-field {
+    gap: 0.1rem;
   }
-
-  .tx-info strong {
-    font-size: 1rem;
-    display: block;
-    margin-bottom: 0.35rem;
-  }
-
-  .tx-info div {
-    font-size: 0.85rem;
-    line-height: 1.5;
-  }
-
-  .tx-fields-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-
+  
   .tx-field label {
-    font-size: 0.8rem;
-    margin-bottom: 0.3rem;
+    font-size: 0.55rem;
+    min-width: 30px;
   }
-
+  
   .tx-field select {
+    padding: 0.12rem 0.15rem;
+    font-size: 0.62rem;
+    min-height: 1.3rem;
+  }
+  
+  .tx-footer {
+    grid-template-columns: 1fr auto;
+    gap: 0.15rem;
+  }
+  
+  .tx-comment {
+    gap: 0.1rem;
+  }
+  
+  .tx-comment label {
     font-size: 0.85rem;
-    padding: 0.4rem 0.35rem;
   }
-
-  @media (max-width:380px) {
-    .tx-fields-grid {
-      grid-template-columns: 1fr;
-    }
+  
+  .tx-comment textarea {
+    padding: 0.12rem 0.15rem;
+    font-size: 0.6rem;
+    min-height: 1.3rem;
   }
-
-  .tx-comment-row {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
+  
+  .delete-btn {
+    padding: 0.12rem 0.2rem !important;
+    font-size: 0.85rem !important;
+    min-width: 30px;
   }
-
-  .tx-actions {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .tx-actions button {
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
-    white-space: nowrap;
-  }
-
+  
   .save-status {
-    font-size: 0.75rem;
-    min-height: 1.2rem;
+    font-size: 0.5rem;
+    top: 0.2rem;
+    right: 0.2rem;
   }
+}
 
-  /* Filter section */
+/* Filtros mobile */
+@media (max-width: 640px) {
   section form[method="get"] {
     grid-template-columns: 1fr !important;
   }
@@ -170,8 +250,14 @@
 
 <!-- Filters Section -->
 <section style="margin:1rem 0;padding:0.75rem;border:1px solid var(--accent);background:var(--panel);">
-  <h2 style="margin-top:0">Filtros</h2>
-  <form method="get" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+    <h2 style="margin:0">Filtros</h2>
+    <button type="button" id="toggle-filters" style="background:#6b7280;color:white;padding:0.4rem 0.8rem;font-size:0.9rem;">
+      <span id="toggle-text">Mostrar filtros</span>
+    </button>
+  </div>
+  <form method="get" id="filters-form">
+    <div style="display:none !important;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;" id="filters-grid">
     <div>
       <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Buscar</label>
       <input type="text" name="search" value="{{ current_filters.search }}" placeholder="Descripción..." style="width:100%;padding:0.45rem 0.55rem;">
@@ -226,6 +312,10 @@
       </select>
     </div>
     <div>
+      <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Mes (YYYY-MM)</label>
+      <input type="text" name="month" value="{{ current_filters.month }}" placeholder="2024-12" pattern="\d{4}-\d{2}" style="width:100%;padding:0.45rem 0.55rem;">
+    </div>
+    <div>
       <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Desde</label>
       <input type="date" name="date_from" value="{{ current_filters.date_from }}" style="width:100%;padding:0.45rem 0.55rem;">
     </div>
@@ -236,6 +326,7 @@
     <div style="display:flex;align-items:flex-end;gap:0.5rem;">
       <button type="submit">Filtrar</button>
       <a href="{% url 'expenses:manage_transactions' %}" style="padding:0.5rem 1rem;text-decoration:none;background:#6b7280;color:white;border-radius:3px;">Limpiar</a>
+    </div>
     </div>
   </form>
   {% if page_obj %}
@@ -248,81 +339,86 @@
   <h2 style="margin-top:0">Lista de Transacciones</h2>
   {% if page_obj and page_obj.object_list %}
     <p style="margin-top:0;color:var(--muted);">Mostrando {{ page_obj.object_list|length }} de {{ page_obj.paginator.count }}.</p>
-    <div style="display:grid;grid-template-columns:1fr;gap:0.75rem;">
+    <div class="tx-list">
       {% for tx in page_obj %}
         <form id="tx-{{ tx.id }}" action="" method="post" class="tx-card">
           {% csrf_token %}
           <input type="hidden" name="action" value="update_tx">
           <input type="hidden" name="tx_id" value="{{ tx.id }}">
 
-          <div class="tx-grid">
-            <!-- Transaction Info -->
+          <!-- Header: 2 líneas compactas -->
+          <div class="tx-header">
             <div class="tx-info">
-              <strong>{{ tx.description }}</strong>
-              <div style="font-size:0.9rem;color:var(--muted);margin-top:0.25rem;">
-                {{ tx.date }} · {{ tx.currency }} {{ tx.amount }}
-                {% if tx.external_id %}<br>ID: {{ tx.external_id }}{% endif %}
-              </div>
+              <div class="tx-meta"><span class="tx-id">#{{ tx.id }}</span>{{ tx.date }}</div>
+              <div class="tx-desc" title="{{ tx.description }}">{{ tx.description }}</div>
             </div>
-
-            <!-- Fields Grid -->
-            <div class="tx-fields-grid">
-              <div class="tx-field">
-                <label>Categoría</label>
-                <select name="category_id"
-                        hx-post="{% url 'expenses:manage_transactions' %}"
-                        hx-include="[name='tx_id'],[name='action'],[name='source_id'],[name='project_id'],[name='comments']"
-                        hx-trigger="change"
-                        hx-target="#save-status-{{ tx.id }}"
-                        hx-swap="innerHTML"
-                        hx-indicator="#save-status-{{ tx.id }}">
-                  <option value="">Sin categoría</option>
-                  {% for cat in categories %}
-                    <option value="{{ cat.id }}" {% if tx.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <div class="tx-field">
-                <label>Origen</label>
-                <select name="source_id"
-                        hx-post="{% url 'expenses:manage_transactions' %}"
-                        hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='project_id'],[name='comments']"
-                        hx-trigger="change"
-                        hx-target="#save-status-{{ tx.id }}"
-                        hx-swap="innerHTML"
-                        hx-indicator="#save-status-{{ tx.id }}">
-                  <option value="">Sin origen</option>
-                  {% for src in sources %}
-                    <option value="{{ src.id }}" {% if tx.source_id == src.id %}selected{% endif %}>{{ src.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <div class="tx-field">
-                <label>Proyecto</label>
-                <select name="project_id"
-                        hx-post="{% url 'expenses:manage_transactions' %}"
-                        hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='source_id'],[name='comments']"
-                        hx-trigger="change"
-                        hx-target="#save-status-{{ tx.id }}"
-                        hx-swap="innerHTML"
-                        hx-indicator="#save-status-{{ tx.id }}">
-                  <option value="">Sin proyecto</option>
-                  {% for proj in projects %}
-                    <option value="{{ proj.id }}" {% if tx.project_id == proj.id %}selected{% endif %}>{{ proj.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
+            <div class="tx-amount">{{ tx.currency }} {{ tx.amount }}</div>
+          </div>
+          
+          <!-- Save status (flotante) -->
+          <div id="save-status-{{ tx.id }}" class="save-status">
+            <span class="spinner htmx-indicator"></span>
+            <span class="status-text"></span>
+          </div>
+          
+          <!-- Campos: 2 columnas en desktop, 1 en mobile -->
+          <div class="tx-fields">
+            <div class="tx-field">
+              <label>Cat</label>
+              <select name="category_id"
+                      hx-post="{% url 'expenses:manage_transactions' %}"
+                      hx-include="[name='tx_id'],[name='action'],[name='source_id'],[name='project_id'],[name='comments']"
+                      hx-trigger="change"
+                      hx-target="#save-status-{{ tx.id }}"
+                      hx-swap="innerHTML"
+                      hx-indicator="#save-status-{{ tx.id }}">
+                <option value="">-</option>
+                {% for cat in categories %}
+                  <option value="{{ cat.id }}" {% if tx.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="tx-field">
+              <label>Orig</label>
+              <select name="source_id"
+                      hx-post="{% url 'expenses:manage_transactions' %}"
+                      hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='project_id'],[name='comments']"
+                      hx-trigger="change"
+                      hx-target="#save-status-{{ tx.id }}"
+                      hx-swap="innerHTML"
+                      hx-indicator="#save-status-{{ tx.id }}">
+                <option value="">-</option>
+                {% for src in sources %}
+                  <option value="{{ src.id }}" {% if tx.source_id == src.id %}selected{% endif %}>{{ src.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="tx-field">
+              <label>Proy</label>
+              <select name="project_id"
+                      hx-post="{% url 'expenses:manage_transactions' %}"
+                      hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='source_id'],[name='comments']"
+                      hx-trigger="change"
+                      hx-target="#save-status-{{ tx.id }}"
+                      hx-swap="innerHTML"
+                      hx-indicator="#save-status-{{ tx.id }}">
+                <option value="">-</option>
+                {% for proj in projects %}
+                  <option value="{{ proj.id }}" {% if tx.project_id == proj.id %}selected{% endif %}>{{ proj.name }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
-
-          <!-- Comments Row -->
-          <div class="tx-comment-row">
-            <div class="tx-comment-field">
-              <label>Comentario</label>
+          
+          <!-- Footer: Comentario + Delete -->
+          <div class="tx-footer">
+            <div class="tx-comment">
+              <label>💬</label>
               <textarea name="comments"
-                        rows="2"
+                        rows="1"
+                        placeholder="Nota..."
                         hx-post="{% url 'expenses:manage_transactions' %}"
                         hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='source_id'],[name='project_id']"
                         hx-trigger="input changed delay:1s"
@@ -330,20 +426,14 @@
                         hx-swap="innerHTML"
                         hx-indicator="#save-status-{{ tx.id }}">{{ tx.comments }}</textarea>
             </div>
-            <div class="tx-actions">
-              <div id="save-status-{{ tx.id }}" class="save-status" style="min-height:1.5rem;text-align:right">
-                <span class="spinner htmx-indicator"></span>
-                <span class="status-text"></span>
-              </div>
-              <button type="button"
-                      class="delete-btn"
-                      hx-post="{% url 'expenses:manage_transactions' %}"
-                      hx-vals='{"action": "delete_tx", "tx_id": "{{ tx.id }}"}'
-                      hx-confirm="¿Estás seguro de eliminar esta transacción?"
-                      hx-target="#tx-{{ tx.id }}"
-                      hx-swap="outerHTML swap:300ms"
-                      style="background:#dc2626;color:white;border:1px solid #b91c1c;white-space:nowrap;padding:0.5rem 0.75rem;">Eliminar</button>
-            </div>
+            <button type="button"
+                    class="delete-btn"
+                    hx-post="{% url 'expenses:manage_transactions' %}"
+                    hx-vals='{"action": "delete_tx", "tx_id": "{{ tx.id }}"}'
+                    hx-confirm="¿Eliminar?"
+                    hx-target="#tx-{{ tx.id }}"
+                    hx-swap="outerHTML swap:300ms"
+                    style="background:#dc2626;color:white;border:1px solid #b91c1c;">🗑️</button>
           </div>
         </form>
       {% endfor %}
@@ -354,7 +444,7 @@
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border);">
         <div>
           {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.source %}&source={{ current_filters.source }}{% endif %}{% if current_filters.project %}&project={{ current_filters.project }}{% endif %}{% if current_filters.payee %}&payee={{ current_filters.payee }}{% endif %}{% if current_filters.currency %}&currency={{ current_filters.currency }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}">« Anterior</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.source %}&source={{ current_filters.source }}{% endif %}{% if current_filters.project %}&project={{ current_filters.project }}{% endif %}{% if current_filters.payee %}&payee={{ current_filters.payee }}{% endif %}{% if current_filters.currency %}&currency={{ current_filters.currency }}{% endif %}{% if current_filters.month %}&month={{ current_filters.month }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}">« Anterior</a>
           {% endif %}
         </div>
         <div>
@@ -362,7 +452,7 @@
         </div>
         <div>
           {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.source %}&source={{ current_filters.source }}{% endif %}{% if current_filters.project %}&project={{ current_filters.project }}{% endif %}{% if current_filters.payee %}&payee={{ current_filters.payee }}{% endif %}{% if current_filters.currency %}&currency={{ current_filters.currency }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}">Siguiente »</a>
+            <a href="?page={{ page_obj.next_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.source %}&source={{ current_filters.source }}{% endif %}{% if current_filters.project %}&project={{ current_filters.project }}{% endif %}{% if current_filters.payee %}&payee={{ current_filters.payee }}{% endif %}{% if current_filters.currency %}&currency={{ current_filters.currency }}{% endif %}{% if current_filters.month %}&month={{ current_filters.month }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}">Siguiente »</a>
           {% endif %}
         </div>
       </div>
@@ -371,5 +461,33 @@
     <p style="margin:0">No se encontraron transacciones.</p>
   {% endif %}
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const toggleBtn = document.getElementById('toggle-filters');
+  const toggleText = document.getElementById('toggle-text');
+  const filtersGrid = document.getElementById('filters-grid');
+  
+  if (!toggleBtn || !toggleText || !filtersGrid) {
+    console.error('Filter elements not found');
+    return;
+  }
+  
+  // Always start with filters hidden
+  filtersGrid.style.setProperty('display', 'none', 'important');
+  toggleText.textContent = 'Mostrar filtros';
+  
+  toggleBtn.addEventListener('click', function() {
+    const currentDisplay = window.getComputedStyle(filtersGrid).display;
+    if (currentDisplay === 'none') {
+      filtersGrid.style.setProperty('display', 'grid', 'important');
+      toggleText.textContent = 'Ocultar filtros';
+    } else {
+      filtersGrid.style.setProperty('display', 'none', 'important');
+      toggleText.textContent = 'Mostrar filtros';
+    }
+  });
+});
+</script>
 
 {% endblock %}

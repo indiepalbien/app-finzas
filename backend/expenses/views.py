@@ -243,17 +243,16 @@ def suggest(request, kind):
 def manage_dashboard(request):
     """Simple management dashboard with links to each resource."""
     resources = [
-        ("Categorizar transacciones", "expenses:categorize_transactions"),
-        ("Categories", "expenses:manage_categories"),
-        ("Projects", "expenses:manage_projects"),
-        ("Payees", "expenses:manage_payees"),
-        ("Sources", "expenses:manage_sources"),
-        ("Exchanges", "expenses:manage_exchanges"),
+        ("Categorias", "expenses:manage_categories"),
+        ("Proyectos", "expenses:manage_projects"),
+        ("Beneficiarios", "expenses:manage_payees"),
+        ("Orígenes", "expenses:manage_sources"),
+        ("Cotizaciones", "expenses:manage_exchanges"),
         ("Balances", "expenses:manage_balances"),
-        ("Transactions", "expenses:manage_transactions"),
+        ("Transacciones", "expenses:manage_transactions"),
         ("Splitwise", "expenses:splitwise_status"),
         ("Emails", "expenses:manage_emails"),
-        ("Pending", "expenses:manage_pending_transactions"),
+        ("Pendientes", "expenses:manage_pending_transactions"),
     ]
     return render(request, "manage/dashboard.html", {"resources": resources})
 
@@ -288,265 +287,79 @@ def _update_transaction_category(request, user):
 
 @login_required
 def categorize_transactions(request):
-    """View to add categories and assign them to uncategorized transactions in one place."""
-    user = request.user
-
-    if request.method == "POST":
-        action = request.POST.get("action") or ""
-
-        if action == "add_category":
-            name = (request.POST.get("name") or "").strip()
-            if not name:
-                messages.error(request, "El nombre de la categoría es obligatorio.")
-                return redirect("expenses:categorize_transactions")
-
-            cat, created = Category.objects.get_or_create(user=user, name=name)
-            if created:
-                messages.success(request, f"Categoría '{cat.name}' creada.")
-            else:
-                messages.info(request, f"Ya existe la categoría '{cat.name}'.")
-            return redirect("expenses:categorize_transactions")
-
-        if action == "assign_tx":
-            success, message, tx_id = _update_transaction_category(request, user)
-
-            # HTMX response
-            if request.htmx:
-                if success:
-                    return HttpResponse(
-                        '<span class="spinner" style="display:none"></span>'
-                        '<span class="status-text" style="color:#059669;background:#d1fae5;'
-                        'padding:0.25rem 0.5rem;border-radius:3px;display:inline-block">'
-                        '✓ Guardado</span>'
-                    )
-                else:
-                    return HttpResponse(
-                        '<span class="spinner" style="display:none"></span>'
-                        f'<span class="status-text" style="color:#dc2626;background:#fee2e2;'
-                        f'padding:0.25rem 0.5rem;border-radius:3px;display:inline-block">'
-                        f'{message}</span>',
-                        status=400
-                    )
-
-            # Traditional POST response (fallback)
-            if success:
-                messages.success(request, message)
-                return redirect(reverse("expenses:categorize_transactions") + f"#tx-{tx_id}")
-            else:
-                messages.error(request, message)
-                return redirect("expenses:categorize_transactions")
-
-        messages.error(request, "Acción no reconocida.")
-        return redirect("expenses:categorize_transactions")
-
-    categories = Category.objects.filter(user=user).order_by("name")
-    uncategorized_qs = (
-        Transaction.objects.filter(user=user, category__isnull=True)
-        .select_related("source", "project", "payee")
-        .order_by("-date", "-id")
-    )
-
-    page_number = request.GET.get("page") or 1
-    paginator = Paginator(uncategorized_qs, 25)
-    tx_page = paginator.get_page(page_number)
-
-    context = {
-        "categories": categories,
-        "tx_page": tx_page,
-    }
-    return render(request, "manage/categorize.html", context)
+    """DEPRECATED: Redirect to manage_transactions with uncategorized filter."""
+    return redirect(reverse("expenses:manage_transactions") + "?category=__null__")
 
 
-@login_required
+def redirect_to_uncategorized(request):
+    """Redirect to the unified transactions view with uncategorized filter."""
+    return redirect(reverse("expenses:manage_transactions") + "?category=__null__")
+
+
 def edit_category_transactions(request):
-    """View to edit transactions filtered by category and optionally currency/month."""
-    user = request.user
-
-    # Handle POST requests first (for AJAX saves)
-    if request.method == "POST":
-        action = request.POST.get("action") or ""
-
-        if action == "assign_tx":
-            success, message, tx_id = _update_transaction_category(request, user)
-
-            # HTMX response
-            if request.htmx:
-                if success:
-                    return HttpResponse(
-                        '<span class="spinner" style="display:none"></span>'
-                        '<span class="status-text" style="color:#059669;background:#d1fae5;'
-                        'padding:0.25rem 0.5rem;border-radius:3px;display:inline-block">'
-                        '✓ Guardado</span>'
-                    )
-                else:
-                    return HttpResponse(
-                        '<span class="spinner" style="display:none"></span>'
-                        f'<span class="status-text" style="color:#dc2626;background:#fee2e2;'
-                        f'padding:0.25rem 0.5rem;border-radius:3px;display:inline-block">'
-                        f'{message}</span>',
-                        status=400
-                    )
-
-            # Traditional POST response (fallback) - redirect with filters
-            category_name = request.GET.get('category', '')
-            currency = request.GET.get('currency', '')
-            month_param = request.GET.get('month', '')
-
-            if success:
-                messages.success(request, message)
-            else:
-                messages.error(request, message)
-
-            # Redirect back with same filters if available
-            if category_name:
-                params = f"?category={category_name}"
-                if currency:
-                    params += f"&currency={currency}"
-                if month_param:
-                    params += f"&month={month_param}"
-                return redirect(reverse("expenses:edit_category_transactions") + params)
-            else:
-                return redirect("profile")
-
-        if action == "delete_tx":
-            tx_id = request.POST.get("tx_id")
-
-            if not tx_id:
-                if request.htmx:
-                    return HttpResponse("ID de transacción requerido", status=400)
-                messages.error(request, "ID de transacción requerido.")
-                return redirect("profile")
-
-            try:
-                tx = Transaction.objects.get(pk=tx_id, user=user)
-                tx_description = tx.description
-                tx.delete()
-
-                # HTMX response - return empty to remove the element
-                if request.htmx:
-                    return HttpResponse("")
-
-                messages.success(request, f"Transacción '{tx_description}' eliminada.")
-            except Transaction.DoesNotExist:
-                if request.htmx:
-                    return HttpResponse("Transacción no encontrada", status=404)
-                messages.error(request, "Transacción no encontrada.")
-
-            # Redirect back with filters
-            category_name = request.GET.get('category', '')
-            currency = request.GET.get('currency', '')
-            month_param = request.GET.get('month', '')
-
-            if category_name:
-                params = f"?category={category_name}"
-                if currency:
-                    params += f"&currency={currency}"
-                if month_param:
-                    params += f"&month={month_param}"
-                return redirect(reverse("expenses:edit_category_transactions") + params)
-            else:
-                return redirect("profile")
-
-        messages.error(request, "Acción no reconocida.")
-        return redirect("profile")
-
-    # GET request - show filtered transactions
+    """DEPRECATED: Redirect to manage_transactions with appropriate filters."""
+    # Extract query parameters and redirect to unified view
+    params = []
+    
     category_name = request.GET.get('category', '')
+    if category_name:
+        params.append(f"category={category_name}")
+    
     source_name = request.GET.get('source', '')
+    if source_name:
+        params.append(f"source={source_name}")
+    
     project_name = request.GET.get('project', '')
+    if project_name:
+        params.append(f"project={project_name}")
+    
     currency = request.GET.get('currency', '')
-    month_param = request.GET.get('month', '')  # Format: YYYY-MM
-
-    # Need at least one filter (category, source, or project)
-    if not category_name and not source_name and not project_name:
-        messages.error(request, "Se requiere al menos un filtro (categoría, origen o proyecto).")
-        return redirect("profile")
-
-    # Start with base queryset
-    transactions_qs = Transaction.objects.filter(user=user)
-
-    # Apply category filter if provided
-    if category_name:
-        if category_name == 'Sin categoría':
-            transactions_qs = transactions_qs.filter(category__isnull=True)
-        else:
-            try:
-                category = Category.objects.get(user=user, name=category_name)
-                transactions_qs = transactions_qs.filter(category=category)
-            except Category.DoesNotExist:
-                messages.error(request, f"Categoría '{category_name}' no encontrada.")
-                return redirect("profile")
-
-    # Apply source filter if provided
-    if source_name:
-        try:
-            source = Source.objects.get(user=user, name=source_name)
-            transactions_qs = transactions_qs.filter(source=source)
-        except Source.DoesNotExist:
-            messages.error(request, f"Origen '{source_name}' no encontrado.")
-            return redirect("profile")
-
-    # Apply project filter if provided
-    if project_name:
-        try:
-            project = Project.objects.get(user=user, name=project_name)
-            transactions_qs = transactions_qs.filter(project=project)
-        except Project.DoesNotExist:
-            messages.error(request, f"Proyecto '{project_name}' no encontrado.")
-            return redirect("profile")
-
-    # Apply currency filter if provided
     if currency:
-        transactions_qs = transactions_qs.filter(currency=currency)
-
-    # Apply month filter if provided
+        params.append(f"currency={currency}")
+    
+    month_param = request.GET.get('month', '')
     if month_param:
-        try:
-            year, month = map(int, month_param.split('-'))
-            import calendar
-            last_day = calendar.monthrange(year, month)[1]
-            start_date = datetime.date(year, month, 1)
-            end_date = datetime.date(year, month, last_day)
-            transactions_qs = transactions_qs.filter(date__gte=start_date, date__lte=end_date)
-        except (ValueError, AttributeError):
-            pass  # Invalid month format, skip filter
+        params.append(f"month={month_param}")
+    
+    query_string = "&".join(params) if params else ""
+    url = reverse("expenses:manage_transactions")
+    if query_string:
+        url += f"?{query_string}"
+    
+    return redirect(url)
 
-    transactions_qs = transactions_qs.select_related("source", "project", "payee", "category").order_by("-date", "-id")
 
-    # Pagination
-    page_number = request.GET.get("page") or 1
-    paginator = Paginator(transactions_qs, 25)
-    tx_page = paginator.get_page(page_number)
-
-    # Get all categories for the dropdown
-    categories = Category.objects.filter(user=user).order_by("name")
-
-    # Build filter description for display
-    filter_parts = []
+def redirect_to_filtered_transactions(request):
+    """Redirect to the unified transactions view with filters from query parameters."""
+    # Extract query parameters and redirect to unified view
+    params = []
+    
+    category_name = request.GET.get('category', '')
     if category_name:
-        filter_parts.append(f"Categoría: {category_name}")
+        params.append(f"category={category_name}")
+    
+    source_name = request.GET.get('source', '')
     if source_name:
-        filter_parts.append(f"Origen: {source_name}")
+        params.append(f"source={source_name}")
+    
+    project_name = request.GET.get('project', '')
     if project_name:
-        filter_parts.append(f"Proyecto: {project_name}")
+        params.append(f"project={project_name}")
+    
+    currency = request.GET.get('currency', '')
     if currency:
-        filter_parts.append(f"Moneda: {currency}")
+        params.append(f"currency={currency}")
+    
+    month_param = request.GET.get('month', '')
     if month_param:
-        filter_parts.append(f"Mes: {month_param}")
-
-    filter_desc = " | ".join(filter_parts)
-
-    context = {
-        "categories": categories,
-        "tx_page": tx_page,
-        "category_name": category_name,
-        "source_name": source_name,
-        "project_name": project_name,
-        "currency": currency,
-        "month_param": month_param,
-        "filter_desc": filter_desc,
-    }
-    return render(request, "manage/edit_category_transactions.html", context)
+        params.append(f"month={month_param}")
+    
+    query_string = "&".join(params) if params else ""
+    url = reverse("expenses:manage_transactions")
+    if query_string:
+        url += f"?{query_string}"
+    
+    return redirect(url)
 
 
 class OwnerRequiredMixin(UserPassesTestMixin):
@@ -952,6 +765,19 @@ class TransactionListView(OwnerListView):
         if currency:
             qs = qs.filter(currency=currency)
 
+        # Month filtering (format: YYYY-MM)
+        month_param = self.request.GET.get('month')
+        if month_param:
+            try:
+                year, month = map(int, month_param.split('-'))
+                import calendar
+                last_day = calendar.monthrange(year, month)[1]
+                start_date = datetime.date(year, month, 1)
+                end_date = datetime.date(year, month, last_day)
+                qs = qs.filter(date__gte=start_date, date__lte=end_date)
+            except (ValueError, AttributeError):
+                pass  # Invalid month format, skip filter
+
         # Date range filtering
         date_from = self.request.GET.get('date_from')
         if date_from:
@@ -999,6 +825,7 @@ class TransactionListView(OwnerListView):
             'project': self.request.GET.get('project', ''),
             'payee': self.request.GET.get('payee', ''),
             'currency': self.request.GET.get('currency', ''),
+            'month': self.request.GET.get('month', ''),
             'date_from': self.request.GET.get('date_from', ''),
             'date_to': self.request.GET.get('date_to', ''),
             'search': self.request.GET.get('search', ''),
@@ -1864,6 +1691,9 @@ def api_source_expenses(request):
     except UserPreferences.DoesNotExist:
         convert_to_usd = False
 
+    # Get categories map to check counts_to_total flag
+    categories_map = {cat.name: cat.counts_to_total for cat in Category.objects.filter(user=user)}
+
     # Get transactions for selected month with source (filter out null sources)
     first_day = datetime.date(sel_year, sel_month, 1)
     ny, nm = next_month(sel_year, sel_month)
@@ -1882,9 +1712,15 @@ def api_source_expenses(request):
         # Convert to USD and group by source (using absolute values)
         source_totals = {}
         missing_rates_count = 0
-        transactions = month_qs.select_related('source')
+        transactions = month_qs.select_related('source', 'category')
 
         for tx in transactions:
+            # Skip transactions from categories that don't count to total
+            cat_name = tx.category.name if tx.category else 'Sin categoría'
+            counts_to_total = categories_map.get(cat_name, True)
+            if not counts_to_total:
+                continue
+
             src_name = tx.source.name
             amount_usd = tx.to_usd()
 
@@ -1895,7 +1731,7 @@ def api_source_expenses(request):
             if src_name not in source_totals:
                 source_totals[src_name] = Decimal('0')
             # Use absolute value to include both income and expenses
-            source_totals[src_name] += abs(amount_usd)
+            source_totals[src_name] += amount_usd
 
         src_expenses = [
             {
@@ -1909,9 +1745,15 @@ def api_source_expenses(request):
     else:
         # Group by source AND currency (using absolute values)
         source_currency_totals = {}
-        transactions = month_qs.select_related('source')
+        transactions = month_qs.select_related('source', 'category')
 
         for tx in transactions:
+            # Skip transactions from categories that don't count to total
+            cat_name = tx.category.name if tx.category else 'Sin categoría'
+            counts_to_total = categories_map.get(cat_name, True)
+            if not counts_to_total:
+                continue
+
             src_name = tx.source.name
             currency = tx.currency
             key = (src_name, currency)
@@ -1919,7 +1761,7 @@ def api_source_expenses(request):
             if key not in source_currency_totals:
                 source_currency_totals[key] = Decimal('0')
             # Use absolute value to include both income and expenses
-            source_currency_totals[key] += abs(tx.amount)
+            source_currency_totals[key] += tx.amount
 
         # Sort by source name, then currency
         src_expenses = [

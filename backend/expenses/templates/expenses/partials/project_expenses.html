@@ -23,7 +23,7 @@
           {% for row in proj_expenses %}
             <tr>
               <td style="padding:.3rem 0;border-bottom:1px dashed var(--border)">
-                {% url 'expenses:edit_category_transactions' as filter_url %}
+                {% url 'expenses:manage_transactions' as filter_url %}
                 <a href="{{ filter_url }}?project={{ row.project|urlencode }}{% if not convert_to_usd %}&currency={{ row.currency|urlencode }}{% endif %}"
                    style="color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)">
                   {{ row.project }}
