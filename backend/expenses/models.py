@@ -227,7 +227,10 @@ class Transaction(models.Model):
         super().save(*args, **kwargs)
 
     def _calculate_usd(self):
-        """Calculate USD amount using exchange rates."""
+        """Calculate USD amount using exchange rates.
+
+        First tries user-specific Exchange rates, then falls back to DefaultExchangeRate.
+        """
         if self.currency.upper() == 'USD':
             return self.amount
 
@@ -259,6 +262,22 @@ class Transaction(models.Model):
                     return (self.amount / inv_rate).quantize(Decimal('0.01'))
             except Exception:
                 return None
+
+        # Fall back to default exchange rates
+        try:
+            from .models import DefaultExchangeRate
+            source_rate = DefaultExchangeRate.objects.get(currency__iexact=self.currency)
+            target_rate = DefaultExchangeRate.objects.get(currency__iexact='USD')
+
+            if target_rate.rate != 0:
+                # Convert: amount * (source_rate / target_rate)
+                # Since target is USD with rate 1.0, this simplifies to amount * source_rate
+                rate = source_rate.rate / target_rate.rate
+                return (self.amount * rate).quantize(Decimal('0.01'))
+        except DefaultExchangeRate.DoesNotExist:
+            pass
+        except Exception:
+            pass
 
         return None
 

@@ -4,35 +4,46 @@
 {% block title %}Transacciones{% endblock %}
 
 <style>
-/* Transaction card - máxima compactación */
+/* ===== NEO-BRUTALIST TRANSACTIONS LIST ===== */
+
+/* Transaction Card - Neo-Brutalist Style */
 .tx-card {
-  padding: 0.25rem 0.3rem;
-  border: 1px solid #e0e0e0;
-  background: #fff;
-  margin-bottom: 0.25rem;
-  font-size: 0.7rem;
-  line-height: 1.1;
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding: 0.75rem;
+  border: 3px solid #0f172a;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 rgba(15, 23, 42, 0.15);
+  margin-bottom: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
   position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Desktop: 2 columnas */
-.tx-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 0.4rem;
+.tx-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 6px 6px 0 rgba(15, 23, 42, 0.2);
 }
 
 .tx-card * {
   font-family: inherit;
 }
 
-/* Header compacto: ID + fecha + descripción (2 líneas) + monto */
+/* Grid Layout - Desktop */
+.tx-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+/* Header: ID + Date + Description + Amount */
 .tx-header {
   display: flex;
   justify-content: space-between;
-  gap: 0.3rem;
-  margin-bottom: 0.25rem;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #f1f5f9;
 }
 
 .tx-info {
@@ -41,197 +52,375 @@
 }
 
 .tx-meta {
-  font-size: 0.62rem;
-  color: #666;
-  margin-bottom: 0.05rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.3rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .tx-id {
-  font-weight: 700;
-  margin-right: 0.3rem;
+  font-weight: 800;
+  margin-right: 0.5rem;
+  color: #0f172a;
 }
 
 .tx-desc {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 500;
-  font-size: 0.72rem;
-  color: #111;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #0f172a;
+  line-height: 1.4;
 }
 
 .tx-amount {
-  font-weight: 700;
-  font-size: 0.75rem;
+  font-weight: 800;
+  font-size: 1.1rem;
   white-space: nowrap;
-  color: #111;
+  color: #0f172a;
+  padding: 0.25rem 0.5rem;
+  background: #f1f5f9;
+  border-radius: 4px;
 }
 
-/* Campos: grid compacto 2 columnas */
+/* Fields: Category, Source, Project */
 .tx-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.2rem;
-  margin-bottom: 0.2rem;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
 }
 
 .tx-field {
   display: flex;
-  align-items: center;
-  gap: 0.15rem;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .tx-field label {
-  font-size: 0.6rem;
-  font-weight: 600;
-  opacity: 0.7;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
 .tx-field select {
-  flex: 1;
-  padding: 0.15rem 0.2rem;
-  font-size: 0.68rem;
-  border: 1px solid #ddd;
-  background: #fff;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.8rem;
+  border: 2px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
   font-family: inherit;
-  min-height: 1.4rem;
-  line-height: 1;
+  border-radius: 4px;
+  font-weight: 600;
+  line-height: 1.3;
+  transition: all 0.15s ease;
+  cursor: pointer;
 }
 
-/* Footer: nota + eliminar colapsados */
+.tx-field select:hover {
+  border-color: #94a3b8;
+}
+
+.tx-field select:focus {
+  outline: none;
+  border-color: #ff0066;
+  box-shadow: 0 0 0 3px rgba(255, 0, 102, 0.1);
+}
+
+/* Footer: Comment + Delete */
 .tx-footer {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.2rem;
-  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  padding-top: 0.5rem;
+  border-top: 2px solid #f1f5f9;
 }
 
 .tx-comment {
+  flex: 1;
   display: flex;
-  align-items: center;
-  gap: 0.15rem;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .tx-comment label {
-  font-size: 0.9rem;
-  line-height: 1;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .tx-comment textarea {
-  flex: 1;
-  padding: 0.15rem 0.2rem;
-  font-size: 0.65rem;
-  border: 1px solid #ddd;
-  background: #fafafa;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.75rem;
+  border: 2px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
   font-family: inherit;
   resize: none;
-  min-height: 1.4rem;
-  line-height: 1.2;
+  border-radius: 4px;
+  min-height: 2.5rem;
+  line-height: 1.4;
+  transition: all 0.15s ease;
+  font-weight: 500;
 }
 
+.tx-comment textarea:hover {
+  border-color: #94a3b8;
+}
+
+.tx-comment textarea:focus {
+  outline: none;
+  border-color: #ff0066;
+  box-shadow: 0 0 0 3px rgba(255, 0, 102, 0.1);
+}
+
+/* Save Status Indicator */
 .save-status {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  opacity: 0.6;
+  top: 0.75rem;
+  right: 0.75rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  background: #ffffff;
+  font-weight: 700;
+  z-index: 10;
 }
 
+/* Delete Button */
 .delete-btn {
-  padding: 0.15rem 0.25rem !important;
-  font-size: 0.9rem !important;
+  align-self: flex-end;
+  padding: 0.45rem 0.65rem !important;
+  font-size: 1.1rem !important;
   line-height: 1 !important;
   white-space: nowrap;
-  min-width: 35px;
+  background: #dc2626 !important;
+  color: white !important;
+  border: 2px solid #b91c1c !important;
+  border-radius: 4px !important;
+  min-width: 44px;
+  height: 2.5rem;
+  transition: all 0.15s ease !important;
+  box-shadow: 2px 2px 0 rgba(220, 38, 38, 0.3) !important;
+  cursor: pointer;
+  font-weight: 700;
 }
 
-/* Mobile: 2 COLUMNAS con diseño aún más compacto */
+.delete-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 0 rgba(220, 38, 38, 0.4) !important;
+  background: #b91c1c !important;
+}
+
+/* Filters Section */
+.filters-section {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border: 3px solid var(--accent);
+  background: var(--panel);
+  border-radius: 4px;
+  box-shadow: 6px 6px 0 rgba(15, 23, 42, 0.1);
+}
+
+#toggle-filters {
+  background: var(--accent);
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 3px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 3px 3px 0 rgba(255, 0, 102, 0.2);
+}
+
+#toggle-filters:hover {
+  transform: translateY(-1px);
+  box-shadow: 4px 4px 0 rgba(255, 0, 102, 0.3);
+}
+
+/* Pagination */
+.pagination a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.pagination a:hover {
+  transform: translateY(-1px);
+}
+
+/* ===== TABLET (641px - 959px) ===== */
+@media (min-width: 641px) and (max-width: 959px) {
+  .tx-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.85rem;
+  }
+
+  .tx-card {
+    padding: 0.6rem 0.7rem;
+  }
+
+  .tx-meta {
+    font-size: 0.8rem;
+  }
+
+  .tx-desc {
+    font-size: 0.9rem;
+  }
+
+  .tx-amount {
+    font-size: 0.95rem;
+  }
+
+  .tx-field label {
+    font-size: 0.7rem;
+  }
+
+  .tx-field select {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.45rem;
+  }
+
+  .tx-comment textarea {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.45rem;
+  }
+}
+
+/* ===== MOBILE (≤640px) - COMPACT ===== */
 @media (max-width: 640px) {
   .tx-list {
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.25rem;
+    gap: 0.5rem;
   }
-  
+
   .tx-card {
-    padding: 0.2rem 0.25rem;
-    margin-bottom: 0;
-    font-size: 0.65rem;
+    padding: 0.5rem;
+    border-width: 2px;
+    box-shadow: 3px 3px 0 rgba(15, 23, 42, 0.1);
   }
-  
+
+  .tx-card:hover {
+    transform: none;
+    box-shadow: 3px 3px 0 rgba(15, 23, 42, 0.1);
+  }
+
   .tx-header {
-    gap: 0.2rem;
-    margin-bottom: 0.2rem;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.4rem;
   }
-  
+
   .tx-meta {
-    font-size: 0.58rem;
+    font-size: 0.65rem;
+    margin-bottom: 0.25rem;
   }
-  
+
+  .tx-id {
+    margin-right: 0.35rem;
+  }
+
   .tx-desc {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
   }
-  
+
   .tx-amount {
-    font-size: 0.7rem;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
   }
-  
-  /* Campos en 1 columna en móvil */
+
+  /* Stack fields vertically on mobile */
   .tx-fields {
     grid-template-columns: 1fr;
-    gap: 0.15rem;
-    margin-bottom: 0.15rem;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
   }
-  
-  .tx-field {
-    gap: 0.1rem;
-  }
-  
-  .tx-field label {
-    font-size: 0.55rem;
-    min-width: 30px;
-  }
-  
-  .tx-field select {
-    padding: 0.12rem 0.15rem;
-    font-size: 0.62rem;
-    min-height: 1.3rem;
-  }
-  
-  .tx-footer {
-    grid-template-columns: 1fr auto;
-    gap: 0.15rem;
-  }
-  
-  .tx-comment {
-    gap: 0.1rem;
-  }
-  
-  .tx-comment label {
-    font-size: 0.85rem;
-  }
-  
-  .tx-comment textarea {
-    padding: 0.12rem 0.15rem;
-    font-size: 0.6rem;
-    min-height: 1.3rem;
-  }
-  
-  .delete-btn {
-    padding: 0.12rem 0.2rem !important;
-    font-size: 0.85rem !important;
-    min-width: 30px;
-  }
-  
-  .save-status {
-    font-size: 0.5rem;
-    top: 0.2rem;
-    right: 0.2rem;
-  }
-}
 
-/* Filtros mobile */
-@media (max-width: 640px) {
+  .tx-field {
+    gap: 0.2rem;
+  }
+
+  .tx-field label {
+    font-size: 0.6rem;
+  }
+
+  .tx-field select {
+    padding: 0.35rem 0.45rem;
+    font-size: 0.7rem;
+    min-height: auto;
+  }
+
+  .tx-footer {
+    flex-direction: column;
+    gap: 0.4rem;
+    padding-top: 0.4rem;
+  }
+
+  .tx-comment {
+    gap: 0.2rem;
+  }
+
+  .tx-comment label {
+    font-size: 0.6rem;
+  }
+
+  .tx-comment textarea {
+    padding: 0.35rem 0.45rem;
+    font-size: 0.7rem;
+    min-height: 2rem;
+  }
+
+  .delete-btn {
+    width: 100%;
+    height: auto !important;
+    padding: 0.4rem !important;
+    font-size: 1rem !important;
+    box-shadow: 2px 2px 0 rgba(220, 38, 38, 0.25) !important;
+  }
+
+  .delete-btn:hover {
+    transform: none;
+    box-shadow: 2px 2px 0 rgba(220, 38, 38, 0.25) !important;
+  }
+
+  .save-status {
+    font-size: 0.6rem;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.25rem 0.4rem;
+  }
+
+  /* Filters on mobile */
+  .filters-section {
+    border-width: 2px;
+    box-shadow: 4px 4px 0 rgba(15, 23, 42, 0.1);
+  }
+
+  #toggle-filters {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    box-shadow: 2px 2px 0 rgba(255, 0, 102, 0.2);
+  }
+
+  #toggle-filters:hover {
+    transform: none;
+    box-shadow: 2px 2px 0 rgba(255, 0, 102, 0.2);
+  }
+
   section form[method="get"] {
     grid-template-columns: 1fr !important;
   }
@@ -249,10 +438,10 @@
 <h1>Transacciones</h1>
 
 <!-- Filters Section -->
-<section style="margin:1rem 0;padding:0.75rem;border:1px solid var(--accent);background:var(--panel);">
+<section class="filters-section">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
     <h2 style="margin:0">Filtros</h2>
-    <button type="button" id="toggle-filters" style="background:#6b7280;color:white;padding:0.4rem 0.8rem;font-size:0.9rem;">
+    <button type="button" id="toggle-filters">
       <span id="toggle-text">Mostrar filtros</span>
     </button>
   </div>
@@ -335,7 +524,7 @@
 </section>
 
 <!-- Transactions List -->
-<section style="margin:1rem 0;padding:0.75rem;border:1px solid var(--accent);background:var(--panel);">
+<section class="filters-section">
   <h2 style="margin-top:0">Lista de Transacciones</h2>
   {% if page_obj and page_obj.object_list %}
     <p style="margin-top:0;color:var(--muted);">Mostrando {{ page_obj.object_list|length }} de {{ page_obj.paginator.count }}.</p>
@@ -364,7 +553,7 @@
           <!-- Campos: 2 columnas en desktop, 1 en mobile -->
           <div class="tx-fields">
             <div class="tx-field">
-              <label>Cat</label>
+              <label>📁 Categoría</label>
               <select name="category_id"
                       hx-post="{% url 'expenses:manage_transactions' %}"
                       hx-include="[name='tx_id'],[name='action'],[name='source_id'],[name='project_id'],[name='comments']"
@@ -378,9 +567,9 @@
                 {% endfor %}
               </select>
             </div>
-            
+
             <div class="tx-field">
-              <label>Orig</label>
+              <label>💳 Origen</label>
               <select name="source_id"
                       hx-post="{% url 'expenses:manage_transactions' %}"
                       hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='project_id'],[name='comments']"
@@ -394,9 +583,9 @@
                 {% endfor %}
               </select>
             </div>
-            
+
             <div class="tx-field">
-              <label>Proy</label>
+              <label>🎯 Proyecto</label>
               <select name="project_id"
                       hx-post="{% url 'expenses:manage_transactions' %}"
                       hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='source_id'],[name='comments']"
@@ -415,10 +604,10 @@
           <!-- Footer: Comentario + Delete -->
           <div class="tx-footer">
             <div class="tx-comment">
-              <label>💬</label>
+              <label>💬 Comentario</label>
               <textarea name="comments"
                         rows="1"
-                        placeholder="Nota..."
+                        placeholder="Añadir nota..."
                         hx-post="{% url 'expenses:manage_transactions' %}"
                         hx-include="[name='tx_id'],[name='action'],[name='category_id'],[name='source_id'],[name='project_id']"
                         hx-trigger="input changed delay:1s"
@@ -432,8 +621,7 @@
                     hx-vals='{"action": "delete_tx", "tx_id": "{{ tx.id }}"}'
                     hx-confirm="¿Eliminar?"
                     hx-target="#tx-{{ tx.id }}"
-                    hx-swap="outerHTML swap:300ms"
-                    style="background:#dc2626;color:white;border:1px solid #b91c1c;">🗑️</button>
+                    hx-swap="outerHTML swap:300ms">🗑️</button>
           </div>
         </form>
       {% endfor %}
@@ -441,7 +629,7 @@
 
     <!-- Pagination -->
     {% if page_obj.has_previous or page_obj.has_next %}
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+      <div class="pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:0.75rem;border-top:2px solid var(--border);">
         <div>
           {% if page_obj.has_previous %}
             <a href="?page={{ page_obj.previous_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.source %}&source={{ current_filters.source }}{% endif %}{% if current_filters.project %}&project={{ current_filters.project }}{% endif %}{% if current_filters.payee %}&payee={{ current_filters.payee }}{% endif %}{% if current_filters.currency %}&currency={{ current_filters.currency }}{% endif %}{% if current_filters.month %}&month={{ current_filters.month }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}">« Anterior</a>

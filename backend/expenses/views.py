@@ -1709,7 +1709,7 @@ def api_source_expenses(request):
     ).exclude(amount=0)
 
     if convert_to_usd:
-        # Convert to USD and group by source (using absolute values)
+        # Convert to USD and group by source (keep sign: positive = expense, negative = income)
         source_totals = {}
         missing_rates_count = 0
         transactions = month_qs.select_related('source', 'category')
@@ -1730,7 +1730,7 @@ def api_source_expenses(request):
 
             if src_name not in source_totals:
                 source_totals[src_name] = Decimal('0')
-            # Use absolute value to include both income and expenses
+            # Keep sign to calculate net spending (expenses minus income)
             source_totals[src_name] += amount_usd
 
         src_expenses = [
@@ -1743,7 +1743,7 @@ def api_source_expenses(request):
         ]
         missing_rates = missing_rates_count
     else:
-        # Group by source AND currency (using absolute values)
+        # Group by source AND currency (keep sign: positive = expense, negative = income)
         source_currency_totals = {}
         transactions = month_qs.select_related('source', 'category')
 
@@ -1760,7 +1760,7 @@ def api_source_expenses(request):
 
             if key not in source_currency_totals:
                 source_currency_totals[key] = Decimal('0')
-            # Use absolute value to include both income and expenses
+            # Keep sign to calculate net spending (expenses minus income)
             source_currency_totals[key] += tx.amount
 
         # Sort by source name, then currency
