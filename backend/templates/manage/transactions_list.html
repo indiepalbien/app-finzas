@@ -88,6 +88,92 @@
       </div>
     </div>
   </form>
+
+  <!-- Active Filters Display -->
+  {% if current_filters.search or current_filters.category or current_filters.source or current_filters.project or current_filters.payee or current_filters.currency or current_filters.month or current_filters.date_from or current_filters.date_to %}
+  <div class="mt-3 pt-3 border-t border-slate-200">
+    <p class="text-xs font-bold text-slate-600 uppercase mb-2">Filtros activos:</p>
+    <div class="flex flex-wrap gap-2">
+      {% if current_filters.search %}
+      <a href="?{% if current_filters.category %}category={{ current_filters.category }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}{% if current_filters.project %}project={{ current_filters.project }}&{% endif %}{% if current_filters.payee %}payee={{ current_filters.payee }}&{% endif %}{% if current_filters.currency %}currency={{ current_filters.currency }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}{% if current_filters.date_from %}date_from={{ current_filters.date_from }}&{% endif %}{% if current_filters.date_to %}date_to={{ current_filters.date_to }}{% endif %}"
+         class="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 border-2 border-slate-300 rounded-full text-sm font-semibold text-muted no-underline hover:bg-slate-200 hover:border-slate-400 transition-all min-h-[36px]">
+        <span>🔍 "{{ current_filters.search }}"</span>
+        <span class="text-slate-500 hover:text-red-600">✕</span>
+      </a>
+      {% endif %}
+
+      {% if current_filters.category %}
+      <a href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}{% if current_filters.project %}project={{ current_filters.project }}&{% endif %}{% if current_filters.payee %}payee={{ current_filters.payee }}&{% endif %}{% if current_filters.currency %}currency={{ current_filters.currency }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}{% if current_filters.date_from %}date_from={{ current_filters.date_from }}&{% endif %}{% if current_filters.date_to %}date_to={{ current_filters.date_to }}{% endif %}"
+         class="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 border-2 border-blue-300 rounded-full text-sm font-semibold text-muted no-underline hover:bg-blue-200 hover:border-blue-400 transition-all min-h-[36px]">
+        <span>📁 {{ current_filters.category }}</span>
+        <span class="text-slate-500 hover:text-red-600">✕</span>
+      </a>
+      {% endif %}
+
+      {% if current_filters.source %}
+      <a href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.category %}category={{ current_filters.category }}&{% endif %}{% if current_filters.project %}project={{ current_filters.project }}&{% endif %}{% if current_filters.payee %}payee={{ current_filters.payee }}&{% endif %}{% if current_filters.currency %}currency={{ current_filters.currency }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}{% if current_filters.date_from %}date_from={{ current_filters.date_from }}&{% endif %}{% if current_filters.date_to %}date_to={{ current_filters.date_to }}{% endif %}"
+         class="inline-flex items-center gap-2 px-3 py-1 bg-green-100 border-2 border-green-300 rounded-full text-sm font-semibold text-muted no-underline hover:bg-green-200 hover:border-green-400 transition-all min-h-[36px]">
+        <span>💳 {{ current_filters.source }}</span>
+        <span class="text-slate-500 hover:text-red-600">✕</span>
+      </a>
+      {% endif %}
+
+      {% if current_filters.project %}
+      <a href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.category %}category={{ current_filters.category }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}{% if current_filters.payee %}payee={{ current_filters.payee }}&{% endif %}{% if current_filters.currency %}currency={{ current_filters.currency }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}{% if current_filters.date_from %}date_from={{ current_filters.date_from }}&{% endif %}{% if current_filters.date_to %}date_to={{ current_filters.date_to }}{% endif %}"
+         class="inline-flex items-center gap-2 px-3 py-1 bg-purple-100 border-2 border-purple-300 rounded-full text-sm font-semibold text-muted no-underline hover:bg-purple-200 hover:border-purple-400 transition-all min-h-[36px]">
+        <span>🎯 {{ current_filters.project }}</span>
+        <span class="text-slate-500 hover:text-red-600">✕</span>
+      </a>
+      {% endif %}
+
+      {% if current_filters.payee %}
+      <a href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.category %}category={{ current_filters.category }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}{% if current_filters.project %}project={{ current_filters.project }}&{% endif %}{% if current_filters.currency %}currency={{ current_filters.currency }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}{% if current_filters.date_from %}date_from={{ current_filters.date_from }}&{% endif %}{% if current_filters.date_to %}date_to={{ current_filters.date_to }}{% endif %}"
+         class="inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 border-2 border-yellow-300 rounded-full text-sm font-semibold text-muted no-underline hover:bg-yellow-200 hover:border-yellow-400 transition-all min-h-[36px]">
+        <span>👤 {{ current_filters.payee }}</span>
+        <span class="text-slate-500 hover:text-red-600">✕</span>
+      </a>
+      {% endif %}
+
+      {% if current_filters.currency %}
+      <a href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.category %}category={{ current_filters.category }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}{% if current_filters.project %}project={{ current_filters.project }}&{% endif %}{% if current_filters.payee %}payee={{ current_filters.payee }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}{% if current_filters.date_from %}date_from={{ current_filters.date_from }}&{% endif %}{% if current_filters.date_to %}date_to={{ current_filters.date_to }}{% endif %}"
+         class="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 border-2 border-amber-300 rounded-full text-sm font-semibold text-muted no-underline hover:bg-amber-200 hover:border-amber-400 transition-all min-h-[36px]">
+        <span>💰 {{ current_filters.currency }}</span>
+        <span class="text-slate-500 hover:text-red-600">✕</span>
+      </a>
+      {% endif %}
+
+      {% if current_filters.month %}
+      <a href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.category %}category={{ current_filters.category }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}{% if current_filters.project %}project={{ current_filters.project }}&{% endif %}{% if current_filters.payee %}payee={{ current_filters.payee }}&{% endif %}{% if current_filters.currency %}currency={{ current_filters.currency }}&{% endif %}{% if current_filters.date_from %}date_from={{ current_filters.date_from }}&{% endif %}{% if current_filters.date_to %}date_to={{ current_filters.date_to }}{% endif %}"
+         class="inline-flex items-center gap-2 px-3 py-1 bg-pink-100 border-2 border-pink-300 rounded-full text-sm font-semibold text-muted no-underline hover:bg-pink-200 hover:border-pink-400 transition-all min-h-[36px]">
+        <span>📅 {{ current_filters.month }}</span>
+        <span class="text-slate-500 hover:text-red-600">✕</span>
+      </a>
+      {% endif %}
+
+      {% if current_filters.date_from %}
+      <a href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.category %}category={{ current_filters.category }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}{% if current_filters.project %}project={{ current_filters.project }}&{% endif %}{% if current_filters.payee %}payee={{ current_filters.payee }}&{% endif %}{% if current_filters.currency %}currency={{ current_filters.currency }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}{% if current_filters.date_to %}date_to={{ current_filters.date_to }}{% endif %}"
+         class="inline-flex items-center gap-2 px-3 py-1 bg-teal-100 border-2 border-teal-300 rounded-full text-sm font-semibold text-muted no-underline hover:bg-teal-200 hover:border-teal-400 transition-all min-h-[36px]">
+        <span>📆 Desde: {{ current_filters.date_from }}</span>
+        <span class="text-slate-500 hover:text-red-600">✕</span>
+      </a>
+      {% endif %}
+
+      {% if current_filters.date_to %}
+      <a href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.category %}category={{ current_filters.category }}&{% endif %}{% if current_filters.source %}source={{ current_filters.source }}&{% endif %}{% if current_filters.project %}project={{ current_filters.project }}&{% endif %}{% if current_filters.payee %}payee={{ current_filters.payee }}&{% endif %}{% if current_filters.currency %}currency={{ current_filters.currency }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}{% if current_filters.date_from %}date_from={{ current_filters.date_from }}{% endif %}"
+         class="inline-flex items-center gap-2 px-3 py-1 bg-cyan-100 border-2 border-cyan-300 rounded-full text-sm font-semibold text-muted no-underline hover:bg-cyan-200 hover:border-cyan-400 transition-all min-h-[36px]">
+        <span>📆 Hasta: {{ current_filters.date_to }}</span>
+        <span class="text-slate-500 hover:text-red-600">✕</span>
+      </a>
+      {% endif %}
+
+      <!-- Clear all filters -->
+      <a href="{% url 'expenses:manage_transactions' %}" class="inline-flex items-center gap-2 px-3 py-1 bg-red-100 border-2 border-red-300 rounded-full text-sm font-bold text-red-700 no-underline hover:bg-red-200 hover:border-red-400 transition-all min-h-[36px]">
+        <span>Limpiar todos</span>
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   {% if page_obj %}
     <p class="mt-3 mb-0 text-muted text-sm">Total: {{ page_obj.paginator.count }} transacciones</p>
   {% endif %}
