@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
 	Category, Project, Payee, Source, Exchange, Balance, Transaction,
 	UserEmailConfig, UserEmailMessage, SplitwiseAccount, PendingTransaction,
-	DefaultExchangeRate, CategorizationRule, UserProfile,
+	DefaultExchangeRate, CategorizationRule, UserProfile, ImageUpload,
 )
 
 # Register finance models
@@ -69,5 +69,25 @@ class CategorizationRuleAdmin(admin.ModelAdmin):
 		}),
 		("Metadata", {
 			"fields": ("usage_count", "accuracy", "created_at", "updated_at")
+		}),
+	)
+
+
+@admin.register(ImageUpload)
+class ImageUploadAdmin(admin.ModelAdmin):
+	list_display = ("user", "original_filename", "status", "session_id", "uploaded_at", "processed_at")
+	search_fields = ("user__username", "session_id", "original_filename")
+	list_filter = ("status", "uploaded_at", "processed_at")
+	readonly_fields = ("uploaded_at", "processed_at", "extracted_data")
+	fieldsets = (
+		("Upload Info", {
+			"fields": ("user", "image_path", "original_filename", "session_id", "uploaded_at")
+		}),
+		("Processing", {
+			"fields": ("status", "processed_at", "processing_error", "confidence_score")
+		}),
+		("Results", {
+			"fields": ("extracted_data", "raw_ocr_text"),
+			"classes": ("collapse",)
 		}),
 	)

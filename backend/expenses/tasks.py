@@ -388,3 +388,124 @@ def apply_categorization_rules_all_users(max_transactions_per_user=None):
         'total_users': len(user_ids),
         'tasks_spawned': len(user_ids)
     }
+
+
+@shared_task
+def process_images_task(session_id, user_id):
+    """
+    Process uploaded images with LlamaCloud to extract transactions.
+    
+    Args:
+        session_id: UUID string grouping images uploaded together
+        user_id: User ID who uploaded the images
+        
+    Returns:
+        Dictionary with processing results
+    """
+    from django.contrib.auth import get_user_model
+    from .models import ImageUpload, Transaction, Source, Category, Payee
+    from .image_ingest import process_image_with_llamacloud, convert_parsed_to_transaction_dict
+    import asyncio
+    
+    User = get_user_model()
+    
+    try:
+        user = User.objects.get(id=user_id)
+        images_qs = ImageUpload.objects.filter(
+            user=user,
+            session_id=session_id,
+            status='pending'
+        )
+        
+        if not images_qs.exists():
+            logger.warning(f"No pending images found for session {session_id}")
+            return {
+                'success': False,
+                'error': 'No pending images found',
+                'session_id': session_id
+            }
+        
+        # Convert to list BEFORE updating status (to preserve references)
+        images = list(images_qs)
+        
+        # Mark images as processing
+        images_qs.update(status='processing')
+        
+        # Collect image paths
+        image_paths = [img.image_path for img in images]
+        
+        logger.info(f"Processing {len(image_paths)} images for user {user_id}, session {session_id}")
+        
+        # Call LlamaCloud API (now synchronous with internal async handling)
+        results = process_image_with_llamacloud(image_paths)
+        
+        total_transactions = 0
+        processed_count = 0
+        failed_count = 0
+        
+        # Process each image result (results is a list of lists of ParsedTransaction)
+        for idx, transactions_list in enumerate(results):
+            img = images[idx]
+            
+            try:
+                # Store extracted data
+                img.extracted_data = {
+                    'transactions': [t.model_dump() for t in transactions_list]
+                }
+                img.status = 'processed'
+                img.processed_at = timezone.now()
+                
+                img.save()
+                processed_count += 1
+                total_transactions += len(transactions_list)
+                
+                logger.info(
+                    f"Successfully processed image {img.id}: {len(transactions_list)} transactions extracted"
+                )
+            except Exception as e:
+                # Mark as failed
+                img.status = 'failed'
+                img.processing_error = str(e)[:500]
+                img.processed_at = timezone.now()
+                img.save()
+                failed_count += 1
+                logger.error(f"Failed to process image {img.id}: {e}")
+        
+        # Clean up temporary files
+        import os
+        import shutil
+        temp_dir = os.path.dirname(image_paths[0]) if image_paths else None
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+                logger.info(f"Cleaned up temporary directory: {temp_dir}")
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to clean up temp dir {temp_dir}: {cleanup_error}")
+        
+        return {
+            'success': True,
+            'session_id': session_id,
+            'user_id': user_id,
+            'images_processed': processed_count,
+            'images_failed': failed_count,
+            'total_images': len(images),
+            'total_transactions': total_transactions
+        }
+        
+    except Exception as e:
+        logger.error(f"Error processing images for session {session_id}: {e}", exc_info=True)
+        # Mark all images as failed
+        ImageUpload.objects.filter(
+            session_id=session_id,
+            status='processing'
+        ).update(
+            status='failed',
+            processing_error=str(e)[:500],
+            processed_at=timezone.now()
+        )
+        return {
+            'success': False,
+            'error': str(e),
+            'session_id': session_id,
+            'user_id': user_id
+        }

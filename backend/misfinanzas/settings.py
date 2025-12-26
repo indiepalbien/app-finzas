@@ -188,6 +188,9 @@ EMAIL_FETCH_PASS = os.environ.get('EMAIL_FETCH_PASS')  # optional shared mailbox
 # Open Exchange Rates API
 OPENEXCHANGERATES_API_KEY = os.environ.get('OPENEXCHANGERATES_API_KEY')
 
+# LlamaCloud API
+LLAMACLOUD_API_KEY = os.environ.get('LLAMACLOUD_API_KEY', '')
+
 # Celery / Celery Beat
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/1')

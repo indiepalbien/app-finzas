@@ -455,3 +455,50 @@ class CategorizationRule(models.Model):
         """Increment usage counter."""
         self.usage_count += 1
         self.save(update_fields=['usage_count', 'updated_at'])
+
+
+class ImageUpload(models.Model):
+    """Stores uploaded images before processing for transaction extraction."""
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('processed', 'Processed'),
+        ('failed', 'Failed'),
+    ]
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    image_path = models.CharField(max_length=500, help_text="Temporary file path")
+    original_filename = models.CharField(max_length=255, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # Processing results
+    processed_at = models.DateTimeField(null=True, blank=True)
+    processing_error = models.TextField(blank=True)
+    raw_ocr_text = models.TextField(blank=True, help_text="Raw OCR text extracted")
+    confidence_score = models.FloatField(null=True, blank=True, help_text="Overall confidence 0-1")
+    
+    # Extracted transaction data (JSON format)
+    extracted_data = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Parsed transaction data from LlamaCloud"
+    )
+    
+    # Session grouping - allows multiple images in one upload session
+    session_id = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text="UUID to group multiple images uploaded together"
+    )
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+        indexes = [
+            models.Index(fields=['user', 'session_id', 'status'], name='img_user_session_status'),
+            models.Index(fields=['user', 'uploaded_at'], name='img_user_uploaded'),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.image.name} ({self.status})"

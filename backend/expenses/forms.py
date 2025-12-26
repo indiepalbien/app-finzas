@@ -77,3 +77,19 @@ class BulkTransactionForm(forms.Form):
             self.fields['bank'].choices = [
                 ('', '--- Select bank ---'),
             ] + list(banks.items())
+
+
+class ImageUploadForm(forms.Form):
+    """Form for uploading transaction images (receipts, invoices)."""
+    
+    images = forms.FileField(
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*',
+            'capture': 'environment',  # Mobile camera preference
+        }),
+        label='Imágenes',
+        required=False,
+        help_text='Sube fotos de recibos, facturas o capturas de transacciones.'
+    )
+

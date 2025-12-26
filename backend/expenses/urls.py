@@ -67,4 +67,12 @@ urlpatterns = [
     path("api/project-expenses/", views.api_project_expenses, name="api_project_expenses"),
     path("api/source-expenses/", views.api_source_expenses, name="api_source_expenses"),
     path("api/update-preference/", views.update_user_preference, name="update_user_preference"),
+    
+    # Image upload routes for transaction extraction
+    path("image-upload/", views.image_upload_view, name="image_upload"),
+    path("image-preview/<str:session_id>/", views.image_preview_view, name="image_preview"),
+    path("image-delete/<int:image_id>/", views.image_delete_view, name="image_delete"),
+    path("image-process/<str:session_id>/", views.image_process_view, name="image_process"),
+    path("image-results/<str:session_id>/", views.image_results_view, name="image_results"),
+    path("image-confirm/<str:session_id>/", views.image_confirm_transactions_view, name="image_confirm_transactions"),
 ]

@@ -319,6 +319,19 @@
         Copiar y pegar desde tu banco
       </span>
     </div>
+    
+    <!-- Image upload link -->
+    <div style="margin-top:0.75rem;">
+      <a href="{% url 'expenses:image_upload' %}" 
+         style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;background:#10b981;color:white;text-decoration:none;border-radius:4px;font-weight:500;transition:opacity .2s"
+         onmouseover="this.style.opacity='0.8'" 
+         onmouseout="this.style.opacity='1'">
+        📷 Subir imágenes de transacciones
+      </a>
+      <span style="margin-left:0.5rem;color:var(--muted);font-size:0.9rem">
+        Procesar recibos y capturas con IA
+      </span>
+    </div>
   </section>
 
 

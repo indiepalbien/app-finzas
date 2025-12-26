@@ -1883,3 +1883,329 @@ def update_user_preference(request):
         'success': False,
         'error': 'Invalid preference key'
     }, status=400)
+
+
+# ============================================================================
+# IMAGE UPLOAD VIEWS
+# ============================================================================
+
+@login_required
+def image_upload_view(request):
+    """Main view for uploading transaction images (receipts, invoices, etc)."""
+    import uuid
+    from .models import ImageUpload
+    from .forms import ImageUploadForm
+    
+    context = _get_onboarding_context(request.user)
+    
+    if request.method == 'POST':
+        import tempfile
+        import os
+        from django.conf import settings
+        
+        # Get or create session ID
+        session_id = request.POST.get('session_id') or str(uuid.uuid4())
+        
+        # Handle multiple files - Django handles this automatically
+        images = request.FILES.getlist('images')
+        
+        if not images:
+            messages.error(request, 'No se seleccionaron imágenes.')
+            return redirect('expenses:image_upload')
+        
+        # Create temp directory for this session
+        temp_dir = os.path.join(tempfile.gettempdir(), 'cachin_uploads', session_id)
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        created_images = []
+        for image_file in images:
+            # Save to temporary file
+            temp_path = os.path.join(temp_dir, image_file.name)
+            with open(temp_path, 'wb+') as destination:
+                for chunk in image_file.chunks():
+                    destination.write(chunk)
+            
+            # Create database record with temp path
+            img = ImageUpload.objects.create(
+                user=request.user,
+                image_path=temp_path,
+                original_filename=image_file.name,
+                session_id=session_id,
+                status='pending'
+            )
+            created_images.append(img)
+        
+        logger.info(
+            f"User {request.user.id} uploaded {len(created_images)} images to {temp_dir}, session {session_id}"
+        )
+        
+        messages.success(
+            request,
+            f'Se subieron {len(created_images)} imagen(es). ¿Deseas agregar más o procesar ahora?'
+        )
+        
+        # Redirect to preview page
+        return redirect('expenses:image_preview', session_id=session_id)
+    else:
+        form = ImageUploadForm()
+    
+    context['form'] = form
+    return render(request, 'expenses/image_upload.html', context)
+
+
+@login_required
+def image_preview_view(request, session_id):
+    """Preview uploaded images before processing."""
+    from .models import ImageUpload
+    
+    context = _get_onboarding_context(request.user)
+    
+    # Get all images for this session
+    images = ImageUpload.objects.filter(
+        user=request.user,
+        session_id=session_id
+    ).order_by('uploaded_at')
+    
+    if not images.exists():
+        messages.error(request, 'No se encontraron imágenes para esta sesión.')
+        return redirect('expenses:image_upload')
+    
+    context['images'] = images
+    context['session_id'] = session_id
+    context['pending_count'] = images.filter(status='pending').count()
+    
+    return render(request, 'expenses/image_preview.html', context)
+
+
+@login_required
+@require_POST
+def image_delete_view(request, image_id):
+    """Delete an uploaded image before processing."""
+    from .models import ImageUpload
+    
+    try:
+        import os
+        
+        image = get_object_or_404(ImageUpload, id=image_id, user=request.user)
+        session_id = image.session_id
+        
+        # Can only delete pending images
+        if image.status != 'pending':
+            messages.error(request, 'No se puede eliminar una imagen ya procesada.')
+            return redirect('expenses:image_preview', session_id=session_id)
+        
+        # Delete temp file
+        if os.path.exists(image.image_path):
+            os.remove(image.image_path)
+        
+        image.delete()
+        messages.success(request, 'Imagen eliminada.')
+        
+        # Check if there are more images in this session
+        remaining = ImageUpload.objects.filter(
+            user=request.user,
+            session_id=session_id
+        ).exists()
+        
+        if not remaining:
+            return redirect('expenses:image_upload')
+        
+        return redirect('expenses:image_preview', session_id=session_id)
+        
+    except Exception as e:
+        logger.error(f"Error deleting image {image_id}: {e}")
+        messages.error(request, f'Error al eliminar la imagen: {str(e)}')
+        return redirect('expenses:image_upload')
+
+
+@login_required
+@require_POST
+def image_process_view(request, session_id):
+    """Trigger Celery task to process images with LlamaCloud."""
+    from .models import ImageUpload
+    from .tasks import process_images_task
+    
+    # Verify session belongs to user
+    images = ImageUpload.objects.filter(
+        user=request.user,
+        session_id=session_id,
+        status='pending'
+    )
+    
+    if not images.exists():
+        messages.error(request, 'No hay imágenes pendientes para procesar.')
+        return redirect('expenses:image_upload')
+    
+    # Trigger Celery task
+    try:
+        process_images_task.delay(session_id, request.user.id)
+        messages.success(
+            request,
+            f'Se están procesando {images.count()} imagen(es). '
+            'Te notificaremos cuando estén listas para revisar.'
+        )
+        logger.info(f"Started processing task for session {session_id}, user {request.user.id}")
+    except Exception as e:
+        logger.error(f"Error starting image processing task: {e}")
+        messages.error(request, f'Error al iniciar el procesamiento: {str(e)}')
+        return redirect('expenses:image_preview', session_id=session_id)
+    
+    return redirect('expenses:image_results', session_id=session_id)
+
+
+@login_required
+def image_results_view(request, session_id):
+    """Show processing status and extracted transactions."""
+    from .models import ImageUpload, Source
+    
+    context = _get_onboarding_context(request.user)
+    
+    images = ImageUpload.objects.filter(
+        user=request.user,
+        session_id=session_id
+    ).order_by('uploaded_at')
+    
+    if not images.exists():
+        messages.error(request, 'No se encontraron imágenes para esta sesión.')
+        return redirect('expenses:image_upload')
+    
+    # Check status
+    pending_count = images.filter(status='pending').count()
+    processing_count = images.filter(status='processing').count()
+    processed_count = images.filter(status='processed').count()
+    failed_count = images.filter(status='failed').count()
+    
+    # Extract all transactions from processed images
+    all_transactions = []
+    for img in images.filter(status='processed', extracted_data__isnull=False):
+        extracted = img.extracted_data.get('transactions', [])
+        for tx_data in extracted:
+            tx_data['image_id'] = img.id
+            tx_data['image_filename'] = img.original_filename
+            all_transactions.append(tx_data)
+    
+    context.update({
+        'session_id': session_id,
+        'images': images,
+        'pending_count': pending_count,
+        'processing_count': processing_count,
+        'processed_count': processed_count,
+        'failed_count': failed_count,
+        'transactions': all_transactions,
+        'is_complete': pending_count == 0 and processing_count == 0,
+        'sources': Source.objects.filter(user=request.user),
+    })
+    
+    return render(request, 'expenses/image_results.html', context)
+
+
+@login_required
+@require_POST
+def image_confirm_transactions_view(request, session_id):
+    """Create transactions from extracted image data."""
+    from .models import ImageUpload, Transaction, Source, Category, Payee
+    from decimal import Decimal
+    import json
+    
+    try:
+        # Get selected transaction indices from form
+        selected_indices = request.POST.getlist('selected_transactions')
+        source_name = request.POST.get('source_name', 'image_upload')
+        
+        if not selected_indices:
+            messages.warning(request, 'No se seleccionaron transacciones.')
+            return redirect('expenses:image_results', session_id=session_id)
+        
+        # Get all processed images for this session
+        images = ImageUpload.objects.filter(
+            user=request.user,
+            session_id=session_id,
+            status='processed',
+            extracted_data__isnull=False
+        )
+        
+        # Collect all transactions
+        all_transactions = []
+        for img in images:
+            extracted = img.extracted_data.get('transactions', [])
+            for tx_data in extracted:
+                tx_data['image_id'] = img.id
+                all_transactions.append(tx_data)
+        
+        # Get or create source
+        source, _ = Source.objects.get_or_create(
+            user=request.user,
+            name=source_name
+        )
+        
+        created_count = 0
+        duplicate_count = 0
+        
+        with transaction.atomic():
+            for idx_str in selected_indices:
+                idx = int(idx_str)
+                if idx >= len(all_transactions):
+                    continue
+                
+                tx_data = all_transactions[idx]
+                
+                # Get currency override (if user changed it)
+                currency_override = request.POST.get(f'currency_{idx}')
+                if currency_override:
+                    tx_data['currency'] = currency_override
+                
+                # Check if sign should be flipped
+                flip_sign = request.POST.get(f'flip_{idx}')
+                amount = Decimal(str(tx_data['amount']))
+                if flip_sign:
+                    amount = -amount
+                
+                # Check for duplicates (use the potentially flipped amount)
+                existing = Transaction.objects.filter(
+                    user=request.user,
+                    date=tx_data['date'],
+                    amount=amount,
+                    description=tx_data['description']
+                ).exists()
+                
+                if existing:
+                    duplicate_count += 1
+                    logger.warning(f"Duplicate transaction from image: {tx_data}")
+                    continue
+                
+                # Create transaction with potentially modified amount and currency
+                tx = Transaction.objects.create(
+                    user=request.user,
+                    date=tx_data['date'],
+                    description=tx_data['description'],
+                    amount=amount,
+                    currency=tx_data['currency'].upper(),
+                    source=source,
+                    status='confirmed'
+                )
+                
+                created_count += 1
+        
+        if created_count > 0:
+            messages.success(
+                request,
+                f'Se crearon {created_count} transacción(es) exitosamente.'
+            )
+        
+        if duplicate_count > 0:
+            messages.warning(
+                request,
+                f'{duplicate_count} transacción(es) duplicadas no se agregaron.'
+            )
+        
+        logger.info(
+            f"User {request.user.id} created {created_count} transactions from images, "
+            f"session {session_id}"
+        )
+        
+        return redirect('profile')
+        
+    except Exception as e:
+        logger.error(f"Error confirming transactions from images: {e}", exc_info=True)
+        messages.error(request, f'Error al crear transacciones: {str(e)}')
+        return redirect('expenses:image_results', session_id=session_id)

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Resultados del Procesamiento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <!-- Status card -->
+            <div class="card shadow mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-check-circle"></i>
+                        Estado del Procesamiento
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 col-md-3 mb-2">
+                            <div class="h3 mb-0">{{ processed_count }}</div>
+                            <small class="text-success">Procesadas</small>
+                        </div>
+                        <div class="col-6 col-md-3 mb-2">
+                            <div class="h3 mb-0">{{ processing_count }}</div>
+                            <small class="text-info">Procesando</small>
+                        </div>
+                        <div class="col-6 col-md-3 mb-2">
+                            <div class="h3 mb-0">{{ pending_count }}</div>
+                            <small class="text-warning">Pendientes</small>
+                        </div>
+                        <div class="col-6 col-md-3 mb-2">
+                            <div class="h3 mb-0">{{ failed_count }}</div>
+                            <small class="text-danger">Errores</small>
+                        </div>
+                    </div>
+
+                    {% if not is_complete %}
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="bi bi-hourglass-split"></i>
+                        El procesamiento está en curso. Esta página se actualizará automáticamente.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Transactions found -->
+            {% if transactions %}
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-receipt"></i>
+                        Transacciones Encontradas ({{ transactions|length }})
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Selecciona las transacciones que deseas agregar. Verifica que la información sea correcta.
+                    </p>
+
+                    <form method="post" action="{% url 'expenses:image_confirm_transactions' session_id %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="source_name" class="form-label">Fuente de las transacciones:</label>
+                            <select name="source_name" id="source_name" class="form-select">
+                                <option value="image_upload">📷 Imagen (nueva fuente)</option>
+                                {% for source in sources %}
+                                <option value="{{ source.name }}">{{ source.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <input type="checkbox" id="selectAll" class="form-check-input">
+                                        </th>
+                                        <th>Fecha</th>
+                                        <th>Descripción</th>
+                                        <th>Monto</th>
+                                        <th>Moneda</th>
+                                        <th>Invertir signo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for tx in transactions %}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" 
+                                                   name="selected_transactions" 
+                                                   value="{{ forloop.counter0 }}"
+                                                   class="form-check-input transaction-checkbox"
+                                                   checked>
+                                        </td>
+                                        <td>{{ tx.date }}</td>
+                                        <td>{{ tx.description }}</td>
+                                        <td>
+                                            <strong id="amount-{{ forloop.counter0 }}">{{ tx.amount }}</strong>
+                                        </td>
+                                        <td>
+                                            <select name="currency_{{ forloop.counter0 }}" class="form-select form-select-sm">
+                                                <option value="USD" {% if tx.currency == 'USD' %}selected{% endif %}>USD</option>
+                                                <option value="PEN" {% if tx.currency == 'PEN' %}selected{% endif %}>PEN</option>
+                                                <option value="UYU" {% if tx.currency == 'UYU' %}selected{% endif %}>UYU</option>
+                                                <option value="EUR" {% if tx.currency == 'EUR' %}selected{% endif %}>EUR</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="checkbox" 
+                                                   name="flip_{{ forloop.counter0 }}"
+                                                   class="form-check-input flip-sign-checkbox"
+                                                   data-index="{{ forloop.counter0 }}"
+                                                   data-original-amount="{{ tx.amount }}">
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i>
+                                Confirmar y Agregar Transacciones Seleccionadas
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% elif is_complete %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                No se encontraron transacciones en las imágenes procesadas.
+            </div>
+            {% endif %}
+
+            <!-- Failed images -->
+            {% if failed_count > 0 %}
+            <div class="card shadow mt-3">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-circle"></i>
+                        Imágenes con Errores
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for image in images %}
+                        {% if image.status == 'failed' %}
+                        <div class="alert alert-danger">
+                            <strong>{{ image.original_filename }}</strong><br>
+                            {{ image.processing_error }}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Navigation -->
+            <div class="mt-3">
+                <a href="{% url 'profile' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    Volver al Inicio
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh if processing is not complete
+{% if not is_complete %}
+setTimeout(function() {
+    location.reload();
+}, 5000);  // Refresh every 5 seconds
+{% endif %}
+
+// Select all checkbox
+document.getElementById('selectAll')?.addEventListener('change', function(e) {
+    const checkboxes = document.querySelectorAll('.transaction-checkbox');
+    checkboxes.forEach(cb => cb.checked = e.target.checked);
+});
+
+// Flip sign functionality
+document.querySelectorAll('.flip-sign-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const index = this.dataset.index;
+        const amountElement = document.getElementById('amount-' + index);
+        const originalAmount = parseFloat(this.dataset.originalAmount);
+        
+        if (this.checked) {
+            amountElement.textContent = (-originalAmount).toFixed(2);
+        } else {
+            amountElement.textContent = originalAmount.toFixed(2);
+        }
+    });
+});
+});
+</script>
+
+<style>
+@media (max-width: 768px) {
+    .card {
+        margin: 0 -15px;
+        border-radius: 0;
+    }
+    
+    .table {
+        font-size: 0.85rem;
+    }
+}
+</style>
+{% endblock %}

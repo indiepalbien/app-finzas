@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Vista Previa de Imágenes{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="bi bi-images"></i>
+                        Vista Previa de Imágenes
+                    </h4>
+                    <span class="badge bg-light text-dark">{{ images.count }} imagen(es)</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Revisa las imágenes antes de procesarlas. Puedes agregar más o eliminar las que no necesites.
+                    </p>
+
+                    <!-- Image grid -->
+                    <div class="row g-3 mb-4">
+                        {% for image in images %}
+                        <div class="col-6 col-md-4 col-lg-3">
+                            <div class="card h-100">
+                                <div class="card-img-top" 
+                                     style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                                    <i class="bi bi-image" style="font-size: 3rem; color: #999;"></i>
+                                </div>
+                                <div class="card-body p-2">
+                                    <small class="text-muted d-block">
+                                        {{ image.uploaded_at|date:"d/m/Y H:i" }}
+                                    </small>
+                                    {% if image.status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                    {% elif image.status == 'processing' %}
+                                        <span class="badge bg-info">Procesando...</span>
+                                    {% elif image.status == 'processed' %}
+                                        <span class="badge bg-success">Procesada</span>
+                                    {% elif image.status == 'failed' %}
+                                        <span class="badge bg-danger">Error</span>
+                                    {% endif %}
+                                </div>
+                                {% if image.status == 'pending' %}
+                                <div class="card-footer p-2">
+                                    <form method="post" action="{% url 'expenses:image_delete' image.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                class="btn btn-sm btn-outline-danger w-100"
+                                                onclick="return confirm('¿Eliminar esta imagen?')">
+                                            <i class="bi bi-trash"></i> Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="d-grid gap-2">
+                        {% if pending_count > 0 %}
+                        <form method="post" action="{% url 'expenses:image_process' session_id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-lg w-100">
+                                <i class="bi bi-cpu"></i>
+                                Procesar {{ pending_count }} Imagen(es) con IA
+                            </button>
+                        </form>
+                        {% endif %}
+                        
+                        <a href="{% url 'expenses:image_upload' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-plus-circle"></i>
+                            Agregar Más Imágenes
+                        </a>
+                        
+                        <a href="{% url 'profile' %}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image modal for full view -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vista Completa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" class="img-fluid" alt="Full view">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showImageModal(imageUrl) {
+    document.getElementById('modalImage').src = imageUrl;
+    const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+    modal.show();
+}
+</script>
+
+<style>
+@media (max-width: 768px) {
+    .card {
+        margin: 0 -15px;
+        border-radius: 0;
+    }
+}
+</style>
+{% endblock %}
