@@ -35,6 +35,20 @@
                         </div>
                     </div>
 
+                    {% if has_failed %}
+                    <div class="mt-3">
+                        <form method="post" action="{% url 'expenses:image_retry' session_id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-arrow-clockwise"></i> Reintentar Procesamiento
+                            </button>
+                        </form>
+                        <small class="text-muted ms-2">
+                            Se reintentarán las imágenes que fallaron o excedieron el tiempo límite.
+                        </small>
+                    </div>
+                    {% endif %}
+
                     {% if not is_complete %}
                     <div class="alert alert-info mt-3 mb-0">
                         <i class="bi bi-hourglass-split"></i>

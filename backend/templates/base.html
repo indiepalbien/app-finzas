@@ -36,6 +36,7 @@
               <div class="nav-user">Hola, {{ user.username }}</div>
               <a href="{% url 'profile' %}">Mi perfil</a>
               <a href="{% url 'expenses:manage_dashboard' %}">Mis datos</a>
+              <a href="{% url 'expenses:my_uploads' %}">Mis Subidas</a>
               <a href="{% url 'logout' %}">Cerrar sesión</a>
             {% else %}
               <a href="{% url 'login' %}">Ingresar</a>

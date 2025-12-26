@@ -2062,11 +2062,34 @@ def image_results_view(request, session_id):
         user=request.user,
         session_id=session_id
     ).order_by('uploaded_at')
-    
+
     if not images.exists():
         messages.error(request, 'No se encontraron imágenes para esta sesión.')
         return redirect('expenses:image_upload')
-    
+
+    # Detect stalled processing (timeout after 10 minutes)
+    from django.utils import timezone
+    from datetime import timedelta
+
+    timeout_threshold = timezone.now() - timedelta(minutes=10)
+    stalled_images = images.filter(
+        status='processing',
+        uploaded_at__lt=timeout_threshold
+    )
+
+    if stalled_images.exists():
+        stalled_count = stalled_images.update(
+            status='failed',
+            processing_error='Tiempo de procesamiento excedido - por favor reintente',
+            processed_at=timezone.now()
+        )
+        logger.warning(f"Marked {stalled_count} stalled images as failed for session {session_id}")
+        messages.warning(
+            request,
+            f'{stalled_count} imagen(es) excedieron el tiempo de procesamiento. '
+            'Puedes reintentar el procesamiento.'
+        )
+
     # Check status
     pending_count = images.filter(status='pending').count()
     processing_count = images.filter(status='processing').count()
@@ -2091,6 +2114,7 @@ def image_results_view(request, session_id):
         'failed_count': failed_count,
         'transactions': all_transactions,
         'is_complete': pending_count == 0 and processing_count == 0,
+        'has_failed': failed_count > 0,
         'sources': Source.objects.filter(user=request.user),
     })
     
@@ -2206,4 +2230,105 @@ def image_confirm_transactions_view(request, session_id):
     except Exception as e:
         logger.error(f"Error confirming transactions from images: {e}", exc_info=True)
         messages.error(request, f'Error al crear transacciones: {str(e)}')
+        return redirect('expenses:image_results', session_id=session_id)
+
+
+@login_required
+def my_uploads_view(request):
+    """Show user's recent upload sessions for recovery."""
+    from .models import ImageUpload
+    from django.db.models import Count, Max, Min
+
+    context = _get_onboarding_context(request.user)
+
+    # Get all sessions from the last 30 days
+    from django.utils import timezone
+    from datetime import timedelta
+
+    threshold = timezone.now() - timedelta(days=30)
+
+    # Group images by session_id with aggregate stats
+    sessions = ImageUpload.objects.filter(
+        user=request.user,
+        uploaded_at__gte=threshold
+    ).values('session_id').annotate(
+        image_count=Count('id'),
+        first_upload=Min('uploaded_at'),
+        last_updated=Max('uploaded_at'),
+        pending_count=Count('id', filter=models.Q(status='pending')),
+        processing_count=Count('id', filter=models.Q(status='processing')),
+        processed_count=Count('id', filter=models.Q(status='processed')),
+        failed_count=Count('id', filter=models.Q(status='failed'))
+    ).order_by('-last_updated')
+
+    # Add session status for each
+    for session in sessions:
+        if session['processing_count'] > 0:
+            session['status'] = 'processing'
+            session['status_display'] = 'En proceso'
+            session['status_class'] = 'warning'
+        elif session['pending_count'] > 0:
+            session['status'] = 'pending'
+            session['status_display'] = 'Pendiente'
+            session['status_class'] = 'info'
+        elif session['failed_count'] > 0 and session['processed_count'] == 0:
+            session['status'] = 'failed'
+            session['status_display'] = 'Fallido'
+            session['status_class'] = 'danger'
+        elif session['failed_count'] > 0:
+            session['status'] = 'partial'
+            session['status_display'] = 'Parcial'
+            session['status_class'] = 'warning'
+        else:
+            session['status'] = 'completed'
+            session['status_display'] = 'Completado'
+            session['status_class'] = 'success'
+
+    context['sessions'] = sessions
+    context['total_sessions'] = len(sessions)
+
+    return render(request, 'expenses/my_uploads.html', context)
+
+
+@login_required
+@require_POST
+def retry_processing_view(request, session_id):
+    """Retry processing for failed/stalled uploads."""
+    from .models import ImageUpload
+    from .tasks import process_images_task
+
+    try:
+        # Get failed or stalled images for this session
+        images = ImageUpload.objects.filter(
+            user=request.user,
+            session_id=session_id,
+            status__in=['failed', 'processing']
+        )
+
+        if not images.exists():
+            messages.warning(request, 'No hay imágenes fallidas o estancadas para reintentar.')
+            return redirect('expenses:image_results', session_id=session_id)
+
+        # Reset status to pending
+        count = images.update(
+            status='pending',
+            processing_error='',
+            processed_at=None,
+            extracted_data=None
+        )
+
+        # Trigger Celery task
+        process_images_task.delay(session_id, request.user.id)
+
+        messages.success(
+            request,
+            f'Se reintentará el procesamiento de {count} imagen(es).'
+        )
+        logger.info(f"User {request.user.id} retrying processing for session {session_id}, {count} images")
+
+        return redirect('expenses:image_results', session_id=session_id)
+
+    except Exception as e:
+        logger.error(f"Error retrying processing for session {session_id}: {e}", exc_info=True)
+        messages.error(request, f'Error al reintentar: {str(e)}')
         return redirect('expenses:image_results', session_id=session_id)
