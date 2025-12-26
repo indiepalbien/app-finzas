@@ -1895,60 +1895,51 @@ def image_upload_view(request):
     import uuid
     from .models import ImageUpload
     from .forms import ImageUploadForm
-    
+
     context = _get_onboarding_context(request.user)
-    
+
     if request.method == 'POST':
-        import tempfile
-        import os
-        from django.conf import settings
-        
         # Get or create session ID
         session_id = request.POST.get('session_id') or str(uuid.uuid4())
-        
+
         # Handle multiple files - Django handles this automatically
         images = request.FILES.getlist('images')
-        
+
         if not images:
             messages.error(request, 'No se seleccionaron imágenes.')
             return redirect('expenses:image_upload')
-        
-        # Create temp directory for this session
-        temp_dir = os.path.join(tempfile.gettempdir(), 'cachin_uploads', session_id)
-        os.makedirs(temp_dir, exist_ok=True)
-        
+
         created_images = []
         for image_file in images:
-            # Save to temporary file
-            temp_path = os.path.join(temp_dir, image_file.name)
-            with open(temp_path, 'wb+') as destination:
-                for chunk in image_file.chunks():
-                    destination.write(chunk)
-            
-            # Create database record with temp path
+            # Validate file type
+            if not image_file.content_type.startswith('image/'):
+                logger.warning(f"Skipping non-image file: {image_file.name}")
+                continue
+
+            # Create database record - Django uploads to storage automatically
             img = ImageUpload.objects.create(
                 user=request.user,
-                image_path=temp_path,
+                image=image_file,  # Django handles upload to Railway bucket or local media
                 original_filename=image_file.name,
                 session_id=session_id,
                 status='pending'
             )
             created_images.append(img)
-        
+
         logger.info(
-            f"User {request.user.id} uploaded {len(created_images)} images to {temp_dir}, session {session_id}"
+            f"User {request.user.id} uploaded {len(created_images)} images, session {session_id}"
         )
-        
+
         messages.success(
             request,
             f'Se subieron {len(created_images)} imagen(es). ¿Deseas agregar más o procesar ahora?'
         )
-        
+
         # Redirect to preview page
         return redirect('expenses:image_preview', session_id=session_id)
     else:
         form = ImageUploadForm()
-    
+
     context['form'] = form
     return render(request, 'expenses/image_upload.html', context)
 
@@ -1993,11 +1984,18 @@ def image_delete_view(request, image_id):
         if image.status != 'pending':
             messages.error(request, 'No se puede eliminar una imagen ya procesada.')
             return redirect('expenses:image_preview', session_id=session_id)
-        
-        # Delete temp file
-        if os.path.exists(image.image_path):
-            os.remove(image.image_path)
-        
+
+        # Delete file from storage (Railway bucket or local filesystem)
+        if image.image:
+            image.image.delete(save=False)  # Delete file without saving model
+
+        # Delete temp file (for legacy records with image_path)
+        if image.image_path and os.path.exists(image.image_path):
+            try:
+                os.remove(image.image_path)
+            except Exception as e:
+                logger.warning(f"Failed to delete temp file {image.image_path}: {e}")
+
         image.delete()
         messages.success(request, 'Imagen eliminada.')
         

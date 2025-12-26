@@ -468,7 +468,8 @@ class ImageUpload(models.Model):
     ]
     
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    image_path = models.CharField(max_length=500, help_text="Temporary file path")
+    image = models.ImageField(upload_to='uploads/%Y/%m/%d/', null=True, blank=True)
+    image_path = models.CharField(max_length=500, help_text="Temporary file path (legacy)", null=True, blank=True)
     original_filename = models.CharField(max_length=255, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -501,4 +502,11 @@ class ImageUpload(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.user.username} - {self.image.name} ({self.status})"
+        return f"{self.user.username} - {self.original_filename} ({self.status})"
+
+    @property
+    def file_url(self):
+        """Get the URL or path to access the file"""
+        if self.image:
+            return self.image.url
+        return self.image_path  # Fallback for old records

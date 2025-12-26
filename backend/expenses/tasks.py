@@ -427,15 +427,43 @@ def process_images_task(session_id, user_id):
         
         # Convert to list BEFORE updating status (to preserve references)
         images = list(images_qs)
-        
+
         # Mark images as processing
         images_qs.update(status='processing')
-        
-        # Collect image paths
-        image_paths = [img.image_path for img in images]
-        
+
+        # Download files from storage to worker's local /tmp
+        import tempfile
+        import os
+        from django.core.files.storage import default_storage
+
+        worker_temp_dir = os.path.join(tempfile.gettempdir(), 'worker_uploads', session_id)
+        os.makedirs(worker_temp_dir, exist_ok=True)
+
+        image_paths = []
+        for img in images:
+            if not img.image:
+                logger.error(f"Image {img.id} has no file")
+                continue
+
+            # Download from storage to local temp file
+            local_path = os.path.join(worker_temp_dir, img.original_filename)
+
+            try:
+                with default_storage.open(img.image.name, 'rb') as remote_file:
+                    with open(local_path, 'wb') as local_file:
+                        local_file.write(remote_file.read())
+
+                image_paths.append(local_path)
+                logger.info(f"Downloaded {img.image.name} to {local_path}")
+            except Exception as e:
+                logger.error(f"Failed to download image {img.id}: {e}")
+                continue
+
+        if not image_paths:
+            raise Exception("No valid image files to process")
+
         logger.info(f"Processing {len(image_paths)} images for user {user_id}, session {session_id}")
-        
+
         # Call LlamaCloud API (now synchronous with internal async handling)
         results = process_image_with_llamacloud(image_paths)
         
@@ -471,16 +499,14 @@ def process_images_task(session_id, user_id):
                 failed_count += 1
                 logger.error(f"Failed to process image {img.id}: {e}")
         
-        # Clean up temporary files
-        import os
+        # Clean up worker's temporary directory
         import shutil
-        temp_dir = os.path.dirname(image_paths[0]) if image_paths else None
-        if temp_dir and os.path.exists(temp_dir):
+        if os.path.exists(worker_temp_dir):
             try:
-                shutil.rmtree(temp_dir)
-                logger.info(f"Cleaned up temporary directory: {temp_dir}")
+                shutil.rmtree(worker_temp_dir)
+                logger.info(f"Cleaned up worker temp directory: {worker_temp_dir}")
             except Exception as cleanup_error:
-                logger.warning(f"Failed to clean up temp dir {temp_dir}: {cleanup_error}")
+                logger.warning(f"Failed to clean up temp dir {worker_temp_dir}: {cleanup_error}")
         
         return {
             'success': True,

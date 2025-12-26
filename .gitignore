@@ -9,3 +9,7 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+# Media files (local development uploads)
+backend/media/
+media/

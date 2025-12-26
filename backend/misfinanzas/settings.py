@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_htmx',
     'pwa',
+    'storages',  # For Railway S3-compatible storage
 ]
 
 MIDDLEWARE = [
@@ -348,3 +349,31 @@ PWA_APP_ICONS_APPLE = [
 PWA_APP_DIR = 'ltr'
 PWA_APP_LANG = 'es-ES'
 PWA_SERVICE_WORKER_PATH = '/static/serviceworker.js'
+
+# Storage Configuration
+# Works both locally (filesystem) and on Railway (S3 bucket)
+if os.getenv('BUCKET'):
+    # Production: Use Railway S3-compatible storage
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+    AWS_ACCESS_KEY_ID = os.getenv('ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('BUCKET')
+    AWS_S3_ENDPOINT_URL = os.getenv('ENDPOINT', 'https://storage.railway.app')
+    AWS_S3_REGION_NAME = os.getenv('REGION', 'auto')
+
+    # S3 settings
+    AWS_S3_FILE_OVERWRITE = False  # Don't overwrite files with same name
+    AWS_DEFAULT_ACL = None  # Use bucket's default ACL
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',  # Cache for 1 day
+    }
+
+    # URL settings
+    AWS_QUERYSTRING_AUTH = True  # Use presigned URLs
+    AWS_QUERYSTRING_EXPIRE = 3600  # URLs expire after 1 hour
+else:
+    # Local development: Use filesystem storage (no Railway bucket needed)
+    # Files will be saved to: backend/media/uploads/YYYY/MM/DD/
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
