@@ -16,7 +16,7 @@
     </button>
   </div>
   <form method="get" id="filters-form">
-    <div id="filters-grid" class="!hidden grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div id="filters-grid" class="hidden grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       <div>
         <label class="block font-semibold mb-1 text-sm">Buscar</label>
         <input type="text" name="search" value="{{ current_filters.search }}" placeholder="Descripción..." class="w-full px-3 py-2 border-2 border-slate-300 rounded focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 min-h-[44px]">
@@ -185,31 +185,27 @@
   {% if page_obj and page_obj.object_list %}
     <p class="mt-0 mb-4 text-muted text-sm">Mostrando {{ page_obj.object_list|length }} de {{ page_obj.paginator.count }}.</p>
 
-    <!-- Mobile-first: 1 column on mobile, 2 on tablet, 3 on desktop -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+    <!-- Single column list, wider cards -->
+    <div class="flex flex-col gap-3">
       {% for tx in page_obj %}
         <form id="tx-{{ tx.id }}" action="" method="post" class="relative p-4 border-3 border-border bg-white rounded-md shadow-brutal transition-all hover:-translate-y-1 hover:shadow-brutal-lg">
           {% csrf_token %}
           <input type="hidden" name="action" value="update_tx">
           <input type="hidden" name="tx_id" value="{{ tx.id }}">
 
-          <!-- Header: ID, Date, Description, Amount - CRITICAL INFO ON MOBILE -->
-          <div class="flex justify-between items-start gap-3 mb-3 pb-3 border-b-2 border-slate-100">
-            <div class="flex-1 min-w-0">
-              <!-- Date and ID - Mobile readable size -->
-              <div class="text-sm md:text-xs font-semibold text-slate-500 mb-2">
-                <span class="font-extrabold text-muted">#{{ tx.id }}</span>
-                <span class="mx-1">•</span>
-                <span>{{ tx.date }}</span>
-              </div>
-              <!-- Description - Mobile readable, NOT truncated on mobile -->
-              <div class="font-semibold text-base md:text-sm text-muted leading-snug break-words">
-                {{ tx.description }}
-              </div>
+          <!-- Header: Date, Description, Amount in one row -->
+          <div class="flex flex-wrap md:flex-nowrap items-center gap-3 mb-3 pb-3 border-b-2 border-slate-100">
+            <!-- Date -->
+            <div class="text-sm font-semibold text-slate-500 shrink-0">
+              {{ tx.date }}
             </div>
-            <!-- Amount + Currency - Prominent on mobile -->
-            <div class="font-extrabold text-lg md:text-base whitespace-nowrap text-muted px-3 py-1 bg-slate-100 rounded shrink-0">
-              {{ tx.currency }}<br class="md:hidden">{{ tx.amount }}
+            <!-- Description - grows to fill space -->
+            <div class="flex-1 font-semibold text-base text-muted leading-snug break-words min-w-0">
+              {{ tx.description }}
+            </div>
+            <!-- Amount + Currency -->
+            <div class="font-extrabold text-lg whitespace-nowrap text-muted px-3 py-1 bg-slate-100 rounded shrink-0">
+              {{ tx.currency }} {{ tx.amount }}
             </div>
           </div>
 
@@ -219,8 +215,8 @@
             <span class="status-text"></span>
           </div>
 
-          <!-- Fields: Category, Source, Project - Stack on mobile for readability -->
-          <div class="grid grid-cols-1 gap-3 mb-3">
+          <!-- Fields in 3 columns on desktop, 1 column on mobile -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
             <div class="flex flex-col gap-1">
               <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">📁 Categoría</label>
               <select name="category_id"
@@ -334,16 +330,23 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
 
-  // Always start with filters hidden
-  filtersGrid.style.display = 'none';
+  // Ensure filters start hidden and set initial text
+  filtersGrid.classList.add('hidden');
+  filtersGrid.classList.remove('grid');
   toggleText.textContent = 'Mostrar filtros';
 
   toggleBtn.addEventListener('click', function() {
-    if (filtersGrid.style.display === 'none') {
-      filtersGrid.style.display = 'grid';
+    const isHidden = filtersGrid.classList.contains('hidden');
+
+    if (isHidden) {
+      // Show filters
+      filtersGrid.classList.remove('hidden');
+      filtersGrid.classList.add('grid');
       toggleText.textContent = 'Ocultar filtros';
     } else {
-      filtersGrid.style.display = 'none';
+      // Hide filters
+      filtersGrid.classList.add('hidden');
+      filtersGrid.classList.remove('grid');
       toggleText.textContent = 'Mostrar filtros';
     }
   });
