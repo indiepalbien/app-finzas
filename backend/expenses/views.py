@@ -2066,6 +2066,50 @@ def image_process_view(request, session_id):
     return redirect('expenses:image_results', session_id=session_id)
 
 
+def infer_transaction_year(date_str):
+    """
+    Infer the year for a transaction date in MM-DD format.
+
+    Logic:
+    - If month <= current month: use current year
+    - If month > current month: use previous year (e.g., in Jan seeing Dec means last year)
+
+    Args:
+        date_str: Date string in format "MM-DD" or "YYYY-MM-DD"
+
+    Returns:
+        Date string in "YYYY-MM-DD" format
+    """
+    from datetime import datetime
+
+    # If already has year (YYYY-MM-DD format), return as-is
+    if len(date_str.split('-')) == 3 and len(date_str.split('-')[0]) == 4:
+        return date_str
+
+    # Parse MM-DD format
+    try:
+        month, day = date_str.split('-')
+        month = int(month)
+        day = int(day)
+
+        # Get current date
+        now = datetime.now()
+        current_year = now.year
+        current_month = now.month
+
+        # Infer year: if month > current month, use previous year
+        if month > current_month:
+            year = current_year - 1
+        else:
+            year = current_year
+
+        return f"{year}-{month:02d}-{day:02d}"
+
+    except (ValueError, AttributeError):
+        # If parsing fails, return as-is
+        return date_str
+
+
 @login_required
 def image_results_view(request, session_id):
     """Show processing status and extracted transactions."""
@@ -2119,6 +2163,9 @@ def image_results_view(request, session_id):
         for tx_data in extracted:
             tx_data['image_id'] = img.id
             tx_data['image_filename'] = img.original_filename
+
+            # Infer year from MM-DD format (if needed)
+            tx_data['date'] = infer_transaction_year(tx_data.get('date', ''))
 
             # Check for exact duplicate (date + description + amount + currency)
             exact_duplicate = Transaction.objects.filter(
@@ -2196,6 +2243,8 @@ def image_confirm_transactions_view(request, session_id):
             extracted = img.extracted_data.get('transactions', [])
             for tx_data in extracted:
                 tx_data['image_id'] = img.id
+                # Infer year from MM-DD format (if needed)
+                tx_data['date'] = infer_transaction_year(tx_data.get('date', ''))
                 all_transactions.append(tx_data)
         
         # Get or create source
@@ -2314,7 +2363,7 @@ def api_check_duplicate(request):
 
     try:
         data = json.loads(request.body)
-        date = data.get('date')
+        date = infer_transaction_year(data.get('date', ''))
         description = data.get('description')
         amount = Decimal(str(data.get('amount')))
         currency = data.get('currency', '').upper()
