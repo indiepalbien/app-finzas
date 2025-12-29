@@ -2307,8 +2307,8 @@ def image_confirm_transactions_view(request, session_id):
                     logger.warning(f"Skipping transaction with missing date: {tx_data}")
                     messages.warning(
                         request,
-                        f'Se omitió una transacción sin fecha válida. '
-                        f'Por favor completa la fecha manualmente.'
+                        'Se omitió una transacción sin fecha válida. '
+                        'Por favor completa la fecha manualmente.'
                     )
                     continue
                 
