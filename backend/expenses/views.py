@@ -2101,9 +2101,17 @@ def infer_transaction_year(date_str):
         date_str: Date string in format "MM-DD" or "YYYY-MM-DD"
 
     Returns:
-        Date string in "YYYY-MM-DD" format
+        Date string in "YYYY-MM-DD" format, or None if date is empty/invalid
     """
     from datetime import datetime
+
+    # Handle None explicitly
+    if date_str is None:
+        return None
+    
+    # Handle empty or whitespace-only strings
+    if not date_str or not date_str.strip():
+        return None
 
     # If already has year (YYYY-MM-DD format), return as-is
     if len(date_str.split('-')) == 3 and len(date_str.split('-')[0]) == 4:
@@ -2129,8 +2137,8 @@ def infer_transaction_year(date_str):
         return f"{year}-{month:02d}-{day:02d}"
 
     except (ValueError, AttributeError):
-        # If parsing fails, return as-is
-        return date_str
+        # If parsing fails, return None for invalid dates
+        return None
 
 
 @login_required
@@ -2190,24 +2198,31 @@ def image_results_view(request, session_id):
             # Infer year from MM-DD format (if needed)
             tx_data['date'] = infer_transaction_year(tx_data.get('date', ''))
 
-            # Check for exact duplicate (date + description + amount + currency)
-            exact_duplicate = Transaction.objects.filter(
-                user=request.user,
-                date=tx_data['date'],
-                description=tx_data['description'],
-                amount=Decimal(str(tx_data['amount'])),
-                currency=tx_data['currency'].upper()
-            ).exists()
+            # Mark transactions with missing dates
+            tx_data['has_missing_date'] = tx_data['date'] is None
 
-            # Check for partial duplicate (date + amount + currency, no description)
+            # Check for duplicates only if date is valid
+            exact_duplicate = False
             partial_duplicate = False
-            if not exact_duplicate:
-                partial_duplicate = Transaction.objects.filter(
+            
+            if tx_data['date'] is not None:
+                # Check for exact duplicate (date + description + amount + currency)
+                exact_duplicate = Transaction.objects.filter(
                     user=request.user,
                     date=tx_data['date'],
+                    description=tx_data['description'],
                     amount=Decimal(str(tx_data['amount'])),
                     currency=tx_data['currency'].upper()
                 ).exists()
+
+                # Check for partial duplicate (date + amount + currency, no description)
+                if not exact_duplicate:
+                    partial_duplicate = Transaction.objects.filter(
+                        user=request.user,
+                        date=tx_data['date'],
+                        amount=Decimal(str(tx_data['amount'])),
+                        currency=tx_data['currency'].upper()
+                    ).exists()
 
             tx_data['is_exact_duplicate'] = exact_duplicate
             tx_data['is_partial_duplicate'] = partial_duplicate
@@ -2286,6 +2301,16 @@ def image_confirm_transactions_view(request, session_id):
                     continue
                 
                 tx_data = all_transactions[idx]
+                
+                # Skip transactions with missing dates
+                if tx_data['date'] is None:
+                    logger.warning(f"Skipping transaction with missing date: {tx_data}")
+                    messages.warning(
+                        request,
+                        'Se omitió una transacción sin fecha válida. '
+                        'Por favor completa la fecha manualmente.'
+                    )
+                    continue
                 
                 # Get currency override (if user changed it)
                 currency_override = request.POST.get(f'currency_{idx}')
@@ -2391,6 +2416,14 @@ def api_check_duplicate(request):
         amount = Decimal(str(data.get('amount')))
         currency = data.get('currency', '').upper()
 
+        # If date is None/invalid, can't check for duplicates
+        if date is None:
+            return JsonResponse({
+                'is_exact_duplicate': False,
+                'is_partial_duplicate': False,
+                'has_missing_date': True
+            })
+
         # Check for exact duplicate (date + description + amount + currency)
         exact_duplicate = Transaction.objects.filter(
             user=request.user,
@@ -2412,7 +2445,8 @@ def api_check_duplicate(request):
 
         return JsonResponse({
             'is_exact_duplicate': exact_duplicate,
-            'is_partial_duplicate': partial_duplicate
+            'is_partial_duplicate': partial_duplicate,
+            'has_missing_date': False
         })
 
     except Exception as e:
