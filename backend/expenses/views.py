@@ -2106,7 +2106,9 @@ def infer_transaction_year(date_str):
     from datetime import datetime
 
     # Handle empty or None dates
-    if not date_str or not date_str.strip():
+    if not date_str:
+        return None
+    if not date_str.strip():
         return None
 
     # If already has year (YYYY-MM-DD format), return as-is
