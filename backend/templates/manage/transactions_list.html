@@ -200,12 +200,11 @@
               <span>{{ tx.date }}</span>
               <!-- Small icon buttons -->
               <div class="flex items-center gap-1">
-                <button type="button"
-                        onclick="this.closest('form').querySelector('select, textarea').focus()"
-                        title="Editar"
-                        class="text-slate-400 hover:text-accent transition-colors cursor-pointer bg-transparent border-0 p-1 text-base leading-none">
+                <a href="{% url 'expenses:manage_transaction_edit' tx.pk %}?next={{ request.get_full_path|urlencode }}"
+                   title="Editar"
+                   class="text-slate-400 hover:text-accent transition-colors cursor-pointer bg-transparent no-underline p-1 text-base leading-none inline-flex items-center justify-center">
                   ✏️
-                </button>
+                </a>
                 <button type="button"
                         class="text-slate-400 hover:text-red-600 transition-colors cursor-pointer bg-transparent border-0 p-1 text-base leading-none"
                         title="Eliminar"
