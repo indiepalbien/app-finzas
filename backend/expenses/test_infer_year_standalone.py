@@ -27,10 +27,12 @@ def infer_transaction_year(date_str):
     Returns:
         Date string in "YYYY-MM-DD" format, or None if date is empty/invalid
     """
-    # Handle empty or None dates
-    if not date_str:
+    # Handle None explicitly
+    if date_str is None:
         return None
-    if not date_str.strip():
+    
+    # Handle empty or whitespace-only strings
+    if not date_str or not date_str.strip():
         return None
 
     # If already has year (YYYY-MM-DD format), return as-is
