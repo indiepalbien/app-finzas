@@ -19,4 +19,4 @@ node_modules/
 package-lock.json
 
 # Generated CSS (built by Tailwind) - commented out so it's committed for production
-# backend/expenses/static/expenses/output.cssbackend/expenses/test_infer_year_standalone.py
+# backend/expenses/static/expenses/output.css
