@@ -14,6 +14,10 @@ wheels/
 backend/media/
 media/
 
+# SQLite database files (development only)
+backend/db.sqlite3
+*.sqlite3
+
 # Node.js
 node_modules/
 package-lock.json
