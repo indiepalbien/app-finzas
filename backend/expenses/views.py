@@ -931,16 +931,26 @@ class TransactionListView(OwnerListView):
 
 class TransactionCreateView(OwnerCreateView):
     model = Transaction
-    fields = ["date", "description", "amount", "currency", "source", "category", "project", "payee", "comments"]
+    form_class = forms.TransactionForm
     template_name = "manage/form.html"
     success_url = reverse_lazy("expenses:manage_transactions")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
 
 class TransactionUpdateView(OwnerUpdateView):
     model = Transaction
-    fields = ["date", "description", "amount", "currency", "source", "category", "project", "payee", "comments"]
+    form_class = forms.TransactionForm
     template_name = "manage/form.html"
     success_url = reverse_lazy("expenses:manage_transactions")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
 
 class TransactionDeleteView(OwnerDeleteView):

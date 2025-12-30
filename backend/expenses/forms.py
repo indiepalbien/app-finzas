@@ -1,7 +1,7 @@
 """Forms for expenses app."""
 
 from django import forms
-from .models import Exchange
+from .models import Exchange, Transaction, Category, Project, Payee, Source
 
 
 class ExchangeForm(forms.ModelForm):
@@ -81,7 +81,7 @@ class BulkTransactionForm(forms.Form):
 
 class ImageUploadForm(forms.Form):
     """Form for uploading transaction images (receipts, invoices)."""
-    
+
     images = forms.FileField(
         widget=forms.FileInput(attrs={
             'class': 'form-control',
@@ -92,4 +92,21 @@ class ImageUploadForm(forms.Form):
         required=False,
         help_text='Sube fotos de recibos, facturas o capturas de transacciones.'
     )
+
+
+class TransactionForm(forms.ModelForm):
+    """Form for creating/editing transactions with user-filtered fields."""
+
+    class Meta:
+        model = Transaction
+        fields = ["date", "description", "amount", "currency", "source", "category", "project", "payee", "comments"]
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user:
+            # Filter querysets to only show records belonging to the current user
+            self.fields['category'].queryset = Category.objects.filter(user=user)
+            self.fields['project'].queryset = Project.objects.filter(user=user)
+            self.fields['payee'].queryset = Payee.objects.filter(user=user)
+            self.fields['source'].queryset = Source.objects.filter(user=user)
 
