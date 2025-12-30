@@ -4,76 +4,78 @@
 {% block title %}Subir Imágenes de Transacciones{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8 mx-auto">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="bi bi-camera"></i>
-                        Agregar Transacciones desde Imágenes
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">
-                        Sube fotos de recibos, facturas o capturas de pantalla de transacciones.
-                        Nuestro sistema extraerá automáticamente la información usando IA.
-                    </p>
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <section class="mb-6">
+        <h1 class="text-2xl md:text-3xl font-extrabold mb-2 text-muted">
+            📷 Agregar Transacciones desde Imágenes
+        </h1>
+        <p class="text-slate-600">
+            Sube fotos de recibos, facturas o capturas de pantalla de transacciones.
+            Nuestro sistema extraerá automáticamente la información usando IA.
+        </p>
+    </section>
 
-                    <form method="post" enctype="multipart/form-data" id="imageUploadForm">
-                        {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label for="id_images" class="form-label">Imágenes</label>
-                            <input type="file" name="images" accept="image/*" multiple 
-                                   id="id_images" class="form-control">
-                            <div class="form-text">Sube fotos de recibos, facturas o capturas de transacciones. Puedes seleccionar múltiples archivos.</div>
-                            {% if form.images.errors %}
-                                <div class="text-danger">{{ form.images.errors }}</div>
-                            {% endif %}
-                        </div>
+    <!-- Upload Form Card -->
+    <section class="p-4 md:p-6 border-3 border-accent bg-panel rounded shadow-brutal mb-4">
+        <form method="post" enctype="multipart/form-data" id="imageUploadForm">
+            {% csrf_token %}
 
-                        <!-- Paste from clipboard option (desktop/mobile) -->
-                        <div class="mb-3">
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i>
-                                <strong>Para pegar imágenes:</strong> Copia una imagen y presiona <kbd>Ctrl+V</kbd> (Windows/Linux) o <kbd>Cmd+V</kbd> (Mac) en esta página
-                            </div>
-                        </div>
-
-                        <!-- Preview area for selected/pasted images -->
-                        <div id="imagePreview" class="mb-3" style="display: none;">
-                            <h6>Imágenes seleccionadas:</h6>
-                            <div id="previewContainer" class="d-flex flex-wrap gap-2"></div>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-                                <i class="bi bi-upload"></i>
-                                Subir Imágenes
-                            </button>
-                            <a href="{% url 'profile' %}" class="btn btn-outline-secondary">
-                                Cancelar
-                            </a>
-                        </div>
-                    </form>
-                </div>
+            <!-- File Input -->
+            <div class="mb-4">
+                <label for="id_images" class="block font-bold mb-2 text-base text-muted">Imágenes</label>
+                <input type="file"
+                       name="images"
+                       accept="image/*"
+                       multiple
+                       id="id_images"
+                       class="w-full px-3 py-3 border-3 border-border bg-white text-base rounded-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 cursor-pointer min-h-[44px]">
+                <small class="block mt-2 text-sm text-slate-600">
+                    Sube fotos de recibos, facturas o capturas de transacciones. Puedes seleccionar múltiples archivos.
+                </small>
+                {% if form.images.errors %}
+                    <div class="text-red-600 font-semibold mt-2">{{ form.images.errors }}</div>
+                {% endif %}
             </div>
 
-            <!-- Instructions card -->
-            <div class="card mt-3">
-                <div class="card-body">
-                    <h6 class="card-title">💡 Consejos para mejores resultados:</h6>
-                    <ul class="mb-0">
-                        <li>Asegúrate de que el texto sea legible y bien iluminado</li>
-                        <li>Incluye la fecha, monto y descripción de la transacción</li>
-                        <li>Puedes subir múltiples imágenes a la vez</li>
-                        <li>Formatos soportados: JPG, PNG, HEIC</li>
-                    </ul>
-                </div>
+            <!-- Paste from clipboard info -->
+            <div class="mb-4 p-4 bg-blue-50 border-2 border-blue-300 rounded">
+                <p class="text-sm font-semibold text-blue-800">
+                    ℹ️ <strong>Para pegar imágenes:</strong> Copia una imagen y presiona <kbd class="px-2 py-1 bg-white border-2 border-border rounded text-xs font-mono">Ctrl+V</kbd> (Windows/Linux) o <kbd class="px-2 py-1 bg-white border-2 border-border rounded text-xs font-mono">Cmd+V</kbd> (Mac) en esta página
+                </p>
             </div>
-        </div>
-    </div>
+
+            <!-- Preview area for selected/pasted images -->
+            <div id="imagePreview" class="mb-4" style="display: none;">
+                <h6 class="font-bold text-base text-muted mb-2">Imágenes seleccionadas:</h6>
+                <div id="previewContainer" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col gap-3">
+                <button type="submit"
+                        id="submitBtn"
+                        class="w-full bg-accent text-white px-4 py-3 border-0 rounded font-extrabold cursor-pointer text-base transition-all shadow-brutal hover:-translate-y-0.5 hover:shadow-brutal-lg min-h-[44px]">
+                    ⬆️ Subir Imágenes
+                </button>
+                <a href="{% url 'profile' %}"
+                   class="block w-full text-center px-4 py-3 border-3 border-border bg-white text-muted rounded font-bold cursor-pointer transition-all hover:bg-slate-100 hover:border-slate-400 min-h-[44px] no-underline">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </section>
+
+    <!-- Instructions card -->
+    <section class="p-4 md:p-6 border-3 border-border bg-panel rounded shadow-brutal">
+        <h6 class="font-extrabold text-base text-muted mb-3">💡 Consejos para mejores resultados:</h6>
+        <ul class="list-disc pl-5 space-y-1 text-slate-600">
+            <li>Asegúrate de que el texto sea legible y bien iluminado</li>
+            <li>Incluye la fecha, monto y descripción de la transacción</li>
+            <li>Puedes subir múltiples imágenes a la vez</li>
+            <li>Formatos soportados: JPG, PNG, HEIC</li>
+        </ul>
+    </section>
 </div>
 
 <script>
@@ -82,23 +84,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewDiv = document.getElementById('imagePreview');
     const previewContainer = document.getElementById('previewContainer');
     const form = document.getElementById('imageUploadForm');
-    
+
     // Handle file selection
     fileInput.addEventListener('change', function(e) {
         updatePreview();
     });
-    
+
     // Global paste event (Ctrl/Cmd+V) - This is the most reliable method
     document.addEventListener('paste', function(e) {
         const items = e.clipboardData?.items;
         if (!items) return;
-        
+
         let hasImage = false;
         const dt = new DataTransfer();
-        
+
         // Keep existing files
         Array.from(fileInput.files).forEach(file => dt.items.add(file));
-        
+
         for (let item of items) {
             if (item.type.startsWith('image/')) {
                 e.preventDefault();
@@ -110,55 +112,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-        
+
         if (hasImage) {
             fileInput.files = dt.files;
             updatePreview();
-            
+
             // Show success message
             const alert = document.createElement('div');
-            alert.className = 'alert alert-success alert-dismissible fade show mt-2';
-            alert.innerHTML = '<i class="bi bi-check-circle"></i> Imagen pegada correctamente. <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+            alert.className = 'p-3 bg-green-100 border-2 border-green-300 rounded mb-3';
+            alert.innerHTML = '✓ Imagen pegada correctamente.';
             previewDiv.parentElement.insertBefore(alert, previewDiv);
             setTimeout(() => alert.remove(), 3000);
         }
     });
-    
+
     function updatePreview() {
         const files = fileInput.files;
-        
+
         if (files.length === 0) {
             previewDiv.style.display = 'none';
             return;
         }
-        
+
         previewDiv.style.display = 'block';
         previewContainer.innerHTML = '';
-        
+
         Array.from(files).forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const div = document.createElement('div');
-                div.className = 'position-relative';
-                div.style.width = '100px';
-                div.style.height = '100px';
-                
+                div.className = 'relative w-24 h-24 md:w-28 md:h-28';
+
                 const img = document.createElement('img');
                 img.src = e.target.result;
-                img.className = 'img-thumbnail';
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                
+                img.className = 'w-full h-full object-cover border-3 border-border rounded';
+
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
-                removeBtn.className = 'btn btn-sm btn-danger position-absolute top-0 end-0';
-                removeBtn.style.padding = '2px 6px';
+                removeBtn.className = 'absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full font-bold text-sm border-2 border-white cursor-pointer hover:bg-red-600 transition-colors flex items-center justify-center';
                 removeBtn.innerHTML = '×';
                 removeBtn.onclick = function() {
                     removeFile(index);
                 };
-                
+
                 div.appendChild(img);
                 div.appendChild(removeBtn);
                 previewContainer.appendChild(div);
@@ -166,16 +162,16 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.readAsDataURL(file);
         });
     }
-    
+
     function removeFile(index) {
         const files = Array.from(fileInput.files);
         files.splice(index, 1);
-        
+
         // Rebuild DataTransfer
         const dt = new DataTransfer();
         files.forEach(file => dt.items.add(file));
         fileInput.files = dt.files;
-        
+
         updatePreview();
     }
 });
@@ -185,19 +181,6 @@ document.addEventListener('DOMContentLoaded', function() {
 #previewContainer {
     max-height: 300px;
     overflow-y: auto;
-}
-
-/* Mobile optimizations */
-@media (max-width: 768px) {
-    .card {
-        margin: 0 -15px;
-        border-radius: 0;
-    }
-    
-    #previewContainer > div {
-        width: 80px !important;
-        height: 80px !important;
-    }
 }
 </style>
 {% endblock %}
