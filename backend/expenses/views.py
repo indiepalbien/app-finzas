@@ -1637,9 +1637,13 @@ def api_project_expenses(request):
         # Convert to USD and group by project (keep sign: positive = expense, negative = income)
         project_totals = {}
         missing_rates_count = 0
-        transactions = all_txs.select_related('project')
+        transactions = all_txs.select_related('project', 'category')
 
         for tx in transactions:
+            # Skip transactions from categories that don't count towards total
+            if tx.category and not tx.category.counts_to_total:
+                continue
+
             proj_name = tx.project.name
             amount_usd = tx.to_usd()
 
@@ -1663,9 +1667,13 @@ def api_project_expenses(request):
     else:
         # Group by project AND currency (keep sign: positive = expense, negative = income)
         project_currency_totals = {}
-        transactions = all_txs.select_related('project')
+        transactions = all_txs.select_related('project', 'category')
 
         for tx in transactions:
+            # Skip transactions from categories that don't count towards total
+            if tx.category and not tx.category.counts_to_total:
+                continue
+
             proj_name = tx.project.name
             currency = tx.currency
             key = (proj_name, currency)
