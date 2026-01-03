@@ -122,6 +122,26 @@ class BalanceForm(forms.ModelForm):
         }
 
 
+class BalanceCurrencyForm(forms.ModelForm):
+    """Form for adding a single currency balance (used in formsets)."""
+
+    class Meta:
+        model = Balance
+        fields = ['currency', 'amount']
+        widgets = {
+            'currency': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'USD',
+                'maxlength': '3'
+            }),
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '1000.00'
+            }),
+        }
+
+
 class TransactionForm(forms.ModelForm):
     """Form for creating/editing transactions with user-filtered fields."""
 

@@ -7,12 +7,16 @@
   <h1 class="text-2xl md:text-3xl font-extrabold mb-4">Balances</h1>
   <p class="text-gray-600 mb-4">Gestiona los balances iniciales de tus fuentes de pago (cuentas bancarias, tarjetas, etc.)</p>
 
-  <p class="mb-4">
+  <div class="mb-4 flex gap-3 flex-wrap">
     <a href="{% url 'expenses:manage_balance_add' %}?next={{ request.get_full_path|urlencode }}"
        class="bg-accent text-white px-4 py-2 rounded font-bold shadow-brutal hover:-translate-y-0.5 hover:shadow-brutal-lg min-h-[44px] inline-block no-underline transition-all">
       + Añadir Balance
     </a>
-  </p>
+    <a href="{% url 'expenses:manage_balance_bulk_add' %}?next={{ request.get_full_path|urlencode }}"
+       class="bg-blue-600 text-white px-4 py-2 rounded font-bold shadow-brutal hover:-translate-y-0.5 hover:shadow-brutal-lg min-h-[44px] inline-block no-underline transition-all">
+      + Añadir por Monedas
+    </a>
+  </div>
 
   {% if balances_by_source %}
     <div class="space-y-4">

@@ -759,6 +759,78 @@ class BalanceDeleteView(OwnerDeleteView):
     success_url = reverse_lazy("expenses:manage_balances")
 
 
+@login_required
+def balance_bulk_create(request):
+    """Create multiple currency balances for a source at once."""
+    from django.forms import modelformset_factory
+
+    # Get source from query parameter
+    source_id = request.GET.get('source')
+    source = None
+    if source_id:
+        try:
+            source = Source.objects.get(pk=source_id, user=request.user)
+        except Source.DoesNotExist:
+            pass
+
+    BalanceFormSet = modelformset_factory(
+        Balance,
+        form=forms.BalanceCurrencyForm,
+        extra=5,  # Show 5 empty forms
+        can_delete=False
+    )
+
+    if request.method == 'POST':
+        # Common fields from form
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date') or None
+
+        if not source_id:
+            source_id = request.POST.get('source')
+            try:
+                source = Source.objects.get(pk=source_id, user=request.user)
+            except Source.DoesNotExist:
+                pass
+
+        formset = BalanceFormSet(request.POST, queryset=Balance.objects.none())
+
+        if source and start_date and formset.is_valid():
+            created_count = 0
+            for form in formset:
+                if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+                    currency = form.cleaned_data.get('currency')
+                    amount = form.cleaned_data.get('amount')
+
+                    if currency and amount is not None:
+                        Balance.objects.create(
+                            user=request.user,
+                            source=source,
+                            start_date=start_date,
+                            end_date=end_date,
+                            currency=currency,
+                            amount=amount
+                        )
+                        created_count += 1
+
+            if created_count > 0:
+                next_url = request.POST.get('next') or request.GET.get('next') or reverse('expenses:manage_balances')
+                return redirect(next_url)
+    else:
+        formset = BalanceFormSet(queryset=Balance.objects.none())
+
+    # Get all user sources for dropdown
+    sources = Source.objects.filter(user=request.user).order_by('name')
+
+    context = {
+        'formset': formset,
+        'sources': sources,
+        'selected_source': source,
+        'back_url': request.GET.get('next') or reverse('expenses:manage_balances'),
+    }
+
+    return render(request, 'expenses/balance_bulk_create.html', context)
+
+
 # Transaction views
 class TransactionListView(OwnerListView):
     model = Transaction

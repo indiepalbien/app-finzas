@@ -35,6 +35,7 @@ urlpatterns = [
 
     path("manage/balances/", views.BalanceListView.as_view(), name="manage_balances"),
     path("manage/balances/add/", views.BalanceCreateView.as_view(), name="manage_balance_add"),
+    path("manage/balances/bulk-add/", views.balance_bulk_create, name="manage_balance_bulk_add"),
     path("manage/balances/<int:pk>/edit/", views.BalanceUpdateView.as_view(), name="manage_balance_edit"),
     path("manage/balances/<int:pk>/delete/", views.BalanceDeleteView.as_view(), name="manage_balance_delete"),
 
