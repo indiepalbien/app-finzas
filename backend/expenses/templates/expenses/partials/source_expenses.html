@@ -42,7 +42,7 @@
             <tr>
               <td style="padding:.3rem 0;border-bottom:1px dashed var(--border)">
                 {% url 'expenses:manage_transactions' as filter_url %}
-                <a href="{{ filter_url }}?source={% if row.source == 'Sin origen' %}__null__{% else %}{{ row.source|urlencode }}{% endif %}&currency={{ row.currency|urlencode }}&month={{ selected_month_str }}"
+                <a href="{{ filter_url }}?source={% if row.source == 'Sin origen' %}__null__{% else %}{{ row.source|urlencode }}{% endif %}&currency={{ row.currency|urlencode }}{% if row.balance_start_date %}&date_from={{ row.balance_start_date }}&date_to={{ selected_month_last_day }}{% else %}&month={{ selected_month_str }}{% endif %}"
                    class="text-accent no-underline border-b border-dotted border-accent hover:bg-accent hover:text-white px-1 -mx-1 transition-colors">
                   {{ row.source }}
                 </a>

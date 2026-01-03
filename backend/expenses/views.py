@@ -1934,12 +1934,14 @@ def api_source_expenses(request):
         src_expenses = []
         for (src_name, currency), total in sorted(source_currency_totals.items()):
             balance_amt = balance_map.get((src_name, currency))
+            balance_start = balance_start_map.get((src_name, currency))
             src_expenses.append({
                 'source': src_name,
                 'currency': currency,
                 'total': str(total.quantize(Decimal('0.01'))),
                 'balance': str(balance_amt.quantize(Decimal('0.01'))) if balance_amt is not None else '--',
                 'current_balance': str((balance_amt - total).quantize(Decimal('0.01'))) if balance_amt is not None else '--',
+                'balance_start_date': balance_start.isoformat() if balance_start else None,
             })
         missing_rates = missing_rates_count
     else:
@@ -1968,12 +1970,14 @@ def api_source_expenses(request):
         src_expenses = []
         for (src_name, currency), total in sorted(source_currency_totals.items()):
             balance_amt = balance_map.get((src_name, currency))
+            balance_start = balance_start_map.get((src_name, currency))
             src_expenses.append({
                 'source': src_name,
                 'currency': currency,
                 'total': str(total.quantize(Decimal('0.01'))),
                 'balance': str(balance_amt.quantize(Decimal('0.01'))) if balance_amt is not None else '--',
                 'current_balance': str((balance_amt - total).quantize(Decimal('0.01'))) if balance_amt is not None else '--',
+                'balance_start_date': balance_start.isoformat() if balance_start else None,
             })
         missing_rates = 0
 
@@ -1982,6 +1986,7 @@ def api_source_expenses(request):
     context = {
         'src_expenses': src_expenses,
         'selected_month_str': month_str(sel_year, sel_month),
+        'selected_month_last_day': last_day.isoformat(),
         'm_current': month_str(current_year, current_month),
         'm_prev': month_str(py, pm),
         'convert_to_usd': convert_to_usd,
