@@ -1919,8 +1919,8 @@ def api_source_expenses(request):
                 'source': src_name,
                 'currency': currency,
                 'total': str(total.quantize(Decimal('0.01'))),
-                'balance': str(balance_amt.quantize(Decimal('0.01'))) if balance_amt else '--',
-                'current_balance': str((balance_amt - total).quantize(Decimal('0.01'))) if balance_amt else '--',
+                'balance': str(balance_amt.quantize(Decimal('0.01'))) if balance_amt is not None else '--',
+                'current_balance': str((balance_amt - total).quantize(Decimal('0.01'))) if balance_amt is not None else '--',
             })
         missing_rates = missing_rates_count
     else:
@@ -1948,8 +1948,8 @@ def api_source_expenses(request):
                 'source': src_name,
                 'currency': currency,
                 'total': str(total.quantize(Decimal('0.01'))),
-                'balance': str(balance_amt.quantize(Decimal('0.01'))) if balance_amt else '--',
-                'current_balance': str((balance_amt - total).quantize(Decimal('0.01'))) if balance_amt else '--',
+                'balance': str(balance_amt.quantize(Decimal('0.01'))) if balance_amt is not None else '--',
+                'current_balance': str((balance_amt - total).quantize(Decimal('0.01'))) if balance_amt is not None else '--',
             })
         missing_rates = 0
 
