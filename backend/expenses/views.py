@@ -741,14 +741,14 @@ class BalanceListView(OwnerListView):
 
 class BalanceCreateView(OwnerCreateView):
     model = Balance
-    fields = ["source", "start_date", "end_date", "currency", "amount"]
+    form_class = forms.BalanceForm
     template_name = "manage/form.html"
     success_url = reverse_lazy("expenses:manage_balances")
 
 
 class BalanceUpdateView(OwnerUpdateView):
     model = Balance
-    fields = ["source", "start_date", "end_date", "currency", "amount"]
+    form_class = forms.BalanceForm
     template_name = "manage/form.html"
     success_url = reverse_lazy("expenses:manage_balances")
 

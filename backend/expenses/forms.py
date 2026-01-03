@@ -1,7 +1,7 @@
 """Forms for expenses app."""
 
 from django import forms
-from .models import Exchange, Transaction, Category, Project, Payee, Source
+from .models import Exchange, Transaction, Category, Project, Payee, Source, Balance
 
 
 class ExchangeForm(forms.ModelForm):
@@ -94,12 +94,56 @@ class ImageUploadForm(forms.Form):
     )
 
 
+class BalanceForm(forms.ModelForm):
+    """Form for creating/editing balance records."""
+
+    class Meta:
+        model = Balance
+        fields = ['source', 'start_date', 'end_date', 'currency', 'amount']
+        widgets = {
+            'start_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+            'end_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+            'currency': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'USD',
+                'maxlength': '3'
+            }),
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '1000.00'
+            }),
+        }
+
+
 class TransactionForm(forms.ModelForm):
     """Form for creating/editing transactions with user-filtered fields."""
 
     class Meta:
         model = Transaction
         fields = ["date", "description", "amount", "currency", "source", "category", "project", "payee", "comments"]
+        widgets = {
+            'date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '100.00'
+            }),
+            'currency': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'USD',
+                'maxlength': '3'
+            }),
+        }
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
