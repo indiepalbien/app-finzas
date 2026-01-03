@@ -1834,10 +1834,12 @@ def api_source_expenses(request):
 
             if key not in source_currency_totals:
                 source_currency_totals[key] = Decimal('0')
-            # Keep sign to calculate net spending (expenses minus income)
+            # Keep sign: positive = expense (money out), negative = income (money in)
             source_currency_totals[key] += tx.amount  # Store native amount
 
         # Build response with balance data
+        # current_balance = initial_balance - monthly_total
+        # (expenses decrease balance, income increases balance)
         src_expenses = []
         for (src_name, currency), total in sorted(source_currency_totals.items()):
             balance_amt = balance_map.get((src_name, currency))
@@ -1846,7 +1848,7 @@ def api_source_expenses(request):
                 'currency': currency,
                 'total': str(total.quantize(Decimal('0.01'))),
                 'balance': str(balance_amt.quantize(Decimal('0.01'))) if balance_amt else '--',
-                'current_balance': str((total + balance_amt).quantize(Decimal('0.01'))) if balance_amt else '--',
+                'current_balance': str((balance_amt - total).quantize(Decimal('0.01'))) if balance_amt else '--',
             })
         missing_rates = missing_rates_count
     else:
@@ -1861,10 +1863,12 @@ def api_source_expenses(request):
 
             if key not in source_currency_totals:
                 source_currency_totals[key] = Decimal('0')
-            # Keep sign to calculate net spending (expenses minus income)
+            # Keep sign: positive = expense (money out), negative = income (money in)
             source_currency_totals[key] += tx.amount
 
         # Sort by source name, then currency and add balance data
+        # current_balance = initial_balance - monthly_total
+        # (expenses decrease balance, income increases balance)
         src_expenses = []
         for (src_name, currency), total in sorted(source_currency_totals.items()):
             balance_amt = balance_map.get((src_name, currency))
@@ -1873,7 +1877,7 @@ def api_source_expenses(request):
                 'currency': currency,
                 'total': str(total.quantize(Decimal('0.01'))),
                 'balance': str(balance_amt.quantize(Decimal('0.01'))) if balance_amt else '--',
-                'current_balance': str((total + balance_amt).quantize(Decimal('0.01'))) if balance_amt else '--',
+                'current_balance': str((balance_amt - total).quantize(Decimal('0.01'))) if balance_amt else '--',
             })
         missing_rates = 0
 
