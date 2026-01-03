@@ -127,42 +127,44 @@
   {% endif %}
 
   {% if create_url_name %}
-  <p><a href="{% url create_url_name %}?next={{ request.get_full_path|urlencode }}">Añadir nuevo</a></p>
+  <p><a href="{% url create_url_name %}?next={{ request.get_full_path|urlencode }}"
+     class="bg-accent text-white px-4 py-2 rounded font-bold shadow-brutal hover:-translate-y-0.5 hover:shadow-brutal-lg min-h-[44px] inline-block no-underline transition-all">Añadir nuevo</a></p>
   {% endif %}
-  <ul>
+  <div class="space-y-3">
     {% for obj in object_list %}
-      <li>
-        {{ obj }}
-        {% if obj.counts_to_total == False %}<small style="color:#666;margin-left:0.5rem">(no cuenta en subtotal)</small>{% endif %}
-        {% if obj.description %}<br><small style="color:#666">{{ obj.description }}</small>{% endif %}
-        {% if obj.external_id %}<br><small>ID: {{ obj.external_id }}</small>{% endif %}
-        {% if obj.reason %}<br><small>Motivo: {{ obj.reason }}</small>{% endif %}
-        {% if obj.payload %}<br><small>Payload: {{ obj.payload }}</small>{% endif %}
+      <div class="p-4 mb-3 border-3 border-border bg-white rounded shadow-brutal transition-all hover:-translate-y-0.5 hover:shadow-brutal-lg">
+        <div class="font-bold text-lg">{{ obj }}</div>
+        {% if obj.counts_to_total == False %}<span class="text-sm text-gray-500 ml-2">(no cuenta en subtotal)</span>{% endif %}
+        {% if obj.description %}<div class="text-sm text-gray-600 mt-1">{{ obj.description }}</div>{% endif %}
+        {% if obj.external_id %}<div class="text-xs text-gray-500 mt-1">ID: {{ obj.external_id }}</div>{% endif %}
+        {% if obj.reason %}<div class="text-sm text-gray-600 mt-1">Motivo: {{ obj.reason }}</div>{% endif %}
+        {% if obj.payload %}<div class="text-xs text-gray-500 mt-1">Payload: {{ obj.payload }}</div>{% endif %}
         {% if obj.gmail_confirmation_link %}
-          <br>
-          <div style="margin-top: 0.5rem; padding: 0.75rem; background: #fff3cd; border: 2px solid #ffc107; border-radius: 4px;">
-            <strong style="color: #856404;">🔑 Confirmación de Gmail requerida</strong><br>
-            <small style="color: #856404;">Por favor, haz clic en el siguiente botón para confirmar el reenvío automático de Gmail:</small><br>
-            <a href="{{ obj.gmail_confirmation_link }}" target="_blank" rel="noopener noreferrer" 
-               style="display: inline-block; margin-top: 0.5rem; padding: 0.5rem 1rem; background: #28a745; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+          <div class="mt-2 p-3 bg-yellow-50 border-2 border-yellow-400 rounded">
+            <div class="font-bold text-yellow-800">🔑 Confirmación de Gmail requerida</div>
+            <div class="text-sm text-yellow-800 mt-1">Por favor, haz clic en el siguiente botón para confirmar el reenvío automático de Gmail:</div>
+            <a href="{{ obj.gmail_confirmation_link }}" target="_blank" rel="noopener noreferrer"
+               class="inline-block mt-2 px-4 py-2 bg-green-600 text-white no-underline rounded font-bold hover:bg-green-700 transition-colors">
               ✓ Confirmar Reenvío de Gmail
             </a>
           </div>
         {% endif %}
         {% if obj.processed_at and obj.processing_error %}
-          <br><span style="color: #d9534f; font-weight: bold;">❌ Error al procesar: {{ obj.processing_error }}</span>
+          <div class="text-red-600 font-bold mt-2">❌ Error al procesar: {{ obj.processing_error }}</div>
         {% elif obj.processed_at %}
-          <br><small style="color: #5cb85c;">✅ Procesado</small>
+          <div class="text-sm text-green-600 mt-2">✅ Procesado</div>
         {% elif obj.downloaded_at %}
-          <br><small style="color: #f0ad4e;">⏳ Pendiente de procesamiento</small>
+          <div class="text-sm text-yellow-600 mt-2">⏳ Pendiente de procesamiento</div>
         {% endif %}
-        {% if edit_url_name %} — <a href="{% url edit_url_name obj.pk %}?next={{ request.get_full_path|urlencode }}">Editar</a>{% endif %}
-        {% if delete_url_name %} · <a href="{% url delete_url_name obj.pk %}?next={{ request.get_full_path|urlencode }}">Borrar</a>{% endif %}
-      </li>
+        <div class="mt-3 flex gap-3">
+          {% if edit_url_name %}<a href="{% url edit_url_name obj.pk %}?next={{ request.get_full_path|urlencode }}" class="text-accent font-bold hover:underline">Editar</a>{% endif %}
+          {% if delete_url_name %}<a href="{% url delete_url_name obj.pk %}?next={{ request.get_full_path|urlencode }}" class="text-red-600 font-bold hover:underline">Borrar</a>{% endif %}
+        </div>
+      </div>
     {% empty %}
-      <li>No hay elementos.</li>
+      <div class="p-4 border-3 border-border bg-gray-50 rounded text-center text-gray-600">No hay elementos.</div>
     {% endfor %}
-  </ul>
+  </div>
   
   <style>
     .onboarding-banner {

@@ -399,6 +399,18 @@ class OwnerListView(LoginRequiredMixin, ListView):
 
 
 class OwnerCreateView(LoginRequiredMixin, CreateView):
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Filter all foreign key fields to only show user's own records
+        for field_name, field in form.fields.items():
+            if hasattr(field, 'queryset'):
+                # This is a ModelChoiceField (ForeignKey or ManyToMany)
+                model = field.queryset.model
+                if hasattr(model, 'user'):
+                    # Filter by current user
+                    field.queryset = field.queryset.filter(user=self.request.user)
+        return form
+
     def form_valid(self, form):
         form.instance.user = self.request.user
         return super().form_valid(form)
@@ -425,6 +437,18 @@ class OwnerCreateView(LoginRequiredMixin, CreateView):
 
 
 class OwnerUpdateView(LoginRequiredMixin, OwnerRequiredMixin, UpdateView):
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Filter all foreign key fields to only show user's own records
+        for field_name, field in form.fields.items():
+            if hasattr(field, 'queryset'):
+                # This is a ModelChoiceField (ForeignKey or ManyToMany)
+                model = field.queryset.model
+                if hasattr(model, 'user'):
+                    # Filter by current user
+                    field.queryset = field.queryset.filter(user=self.request.user)
+        return form
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["model_verbose_name"] = self.model._meta.verbose_name
@@ -697,7 +721,22 @@ class PendingTransactionListView(LoginRequiredMixin, ListView):
 # Balance views
 class BalanceListView(OwnerListView):
     model = Balance
-    template_name = "manage/list.html"
+    template_name = "expenses/balance_list.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # Group balances by source for better display
+        balances = ctx['object_list'].select_related('source').order_by(
+            'source__name', 'currency', '-start_date'
+        )
+
+        from itertools import groupby
+        balances_by_source = {}
+        for source_name, group in groupby(balances, key=lambda b: b.source.name if b.source else 'Sin origen'):
+            balances_by_source[source_name] = list(group)
+
+        ctx['balances_by_source'] = balances_by_source
+        return ctx
 
 
 class BalanceCreateView(OwnerCreateView):
@@ -1750,6 +1789,22 @@ def api_source_expenses(request):
     # Get categories map to check counts_to_total flag
     categories_map = {cat.name: cat.counts_to_total for cat in Category.objects.filter(user=user)}
 
+    # Get most recent balance for each (source, currency)
+    balances_qs = Balance.objects.filter(
+        user=user
+    ).select_related('source').order_by('source_id', 'currency', '-start_date')
+
+    # Create map: (source_name, currency) -> balance_amount
+    balance_map = {}
+    seen_keys = set()
+    for bal in balances_qs:
+        if bal.source is None:
+            continue
+        key = (bal.source.name, bal.currency)
+        if key not in seen_keys:
+            balance_map[key] = bal.amount
+            seen_keys.add(key)
+
     # Get transactions for selected month with source (filter out null sources)
     first_day = datetime.date(sel_year, sel_month, 1)
     ny, nm = next_month(sel_year, sel_month)
@@ -1765,8 +1820,8 @@ def api_source_expenses(request):
     ).exclude(amount=0)
 
     if convert_to_usd:
-        # Convert to USD and group by source (keep sign: positive = expense, negative = income)
-        source_totals = {}
+        # Convert to USD and group by source+currency (keep balances in native currency)
+        source_currency_totals = {}
         missing_rates_count = 0
         transactions = month_qs.select_related('source', 'category')
 
@@ -1778,25 +1833,30 @@ def api_source_expenses(request):
                 continue
 
             src_name = tx.source.name
+            currency = tx.currency
+            key = (src_name, currency)
             amount_usd = tx.to_usd()
 
             if amount_usd is None:
                 missing_rates_count += 1
                 continue
 
-            if src_name not in source_totals:
-                source_totals[src_name] = Decimal('0')
+            if key not in source_currency_totals:
+                source_currency_totals[key] = Decimal('0')
             # Keep sign to calculate net spending (expenses minus income)
-            source_totals[src_name] += amount_usd
+            source_currency_totals[key] += tx.amount  # Store native amount
 
-        src_expenses = [
-            {
+        # Build response with balance data
+        src_expenses = []
+        for (src_name, currency), total in sorted(source_currency_totals.items()):
+            balance_amt = balance_map.get((src_name, currency))
+            src_expenses.append({
                 'source': src_name,
-                'currency': 'USD',
+                'currency': currency,
                 'total': str(total.quantize(Decimal('0.01'))),
-            }
-            for src_name, total in sorted(source_totals.items(), key=lambda x: x[1], reverse=True)
-        ]
+                'balance': str(balance_amt.quantize(Decimal('0.01'))) if balance_amt else '--',
+                'current_balance': str((total + balance_amt).quantize(Decimal('0.01'))) if balance_amt else '--',
+            })
         missing_rates = missing_rates_count
     else:
         # Group by source AND currency (keep sign: positive = expense, negative = income)
@@ -1819,15 +1879,17 @@ def api_source_expenses(request):
             # Keep sign to calculate net spending (expenses minus income)
             source_currency_totals[key] += tx.amount
 
-        # Sort by source name, then currency
-        src_expenses = [
-            {
+        # Sort by source name, then currency and add balance data
+        src_expenses = []
+        for (src_name, currency), total in sorted(source_currency_totals.items()):
+            balance_amt = balance_map.get((src_name, currency))
+            src_expenses.append({
                 'source': src_name,
                 'currency': currency,
                 'total': str(total.quantize(Decimal('0.01'))),
-            }
-            for (src_name, currency), total in sorted(source_currency_totals.items())
-        ]
+                'balance': str(balance_amt.quantize(Decimal('0.01'))) if balance_amt else '--',
+                'current_balance': str((total + balance_amt).quantize(Decimal('0.01'))) if balance_amt else '--',
+            })
         missing_rates = 0
 
     py, pm = prev_month(sel_year, sel_month)
