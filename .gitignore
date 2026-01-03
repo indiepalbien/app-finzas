@@ -24,3 +24,8 @@ package-lock.json
 
 # Generated CSS (built by Tailwind) - commented out so it's committed for production
 # backend/expenses/static/expenses/output.css
+
+# Alignet test data (contains sensitive information)
+backend/expenses/email_parsers/test_data/*.eml
+*alignet*test*.eml
+"Fwd Código de seguridad compra en linea.eml"

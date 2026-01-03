@@ -9,6 +9,7 @@ from django.utils import timezone
 from expenses.email_parsers.visa import parse_visa_alert
 from expenses.email_parsers.chase import parse_chase_alert
 from expenses.email_parsers.ibkr import parse_ibkr_trade
+from expenses.email_parsers.alignet import parse_alignet_alert
 from expenses.email_parsers.gmail_forwarding import (
     is_gmail_forwarding_confirmation,
     parse_gmail_forwarding_email,
@@ -60,6 +61,8 @@ def process_new_messages() -> int:
                 count += _process_ibkr_trade(msg)
             elif "donotreplyalertadecomprasvisa@visa.com" in envelope_from or "visa" in subject:
                 count += _process_visa_alert(msg)
+            elif "alignet" in subject or "código de seguridad" in subject:
+                count += _process_alignet_alert(msg)
             else:
                 logger.warning("⚠️  SKIPPED msg_id=%s reason=unrecognized_sender envelope_from=%s",
                               msg.message_id, envelope_from)
@@ -240,6 +243,29 @@ def _process_ibkr_trade(msg: UserEmailMessage) -> int:
         msg.processed_at = timezone.now()
         msg.save(update_fields=["processed_at"])
         return 1
+
+    except IntegrityError as exc:
+        return _handle_duplicate(msg, parsed, exc)
+
+
+def _process_alignet_alert(msg: UserEmailMessage) -> int:
+    """Process Alignet security code emails."""
+    parsed = None
+    try:
+        parsed = parse_alignet_alert(bytes(msg.raw_eml))
+        logger.info("✓ Parsed Alignet email msg_id=%s amount=%s currency=%s description='%s'",
+                   msg.message_id, parsed.get("amount"), parsed.get("currency"),
+                   parsed.get("description", "")[:50])
+
+        # Validate required fields
+        if not parsed.get("amount") or not parsed.get("currency"):
+            logger.warning("⚠️  SKIPPED msg_id=%s reason=missing_amount_currency", msg.message_id)
+            msg.processing_error = "Missing amount or currency"
+            msg.processed_at = timezone.now()
+            msg.save(update_fields=["processing_error", "processed_at"])
+            return 0
+
+        return _create_transaction(msg, parsed)
 
     except IntegrityError as exc:
         return _handle_duplicate(msg, parsed, exc)
