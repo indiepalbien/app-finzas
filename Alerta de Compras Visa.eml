@@ -1,0 +1,63 @@
+Return-Path: <DoNotReplyAlertadeComprasVisa@visa.com>
+Delivered-To: automation@cachinapp.com
+X-Pm-Known-Alias: diego@kiedanski.com
+X-Pm-Original-To: diego@kiedanski.com
+Authentication-Results: purelymail.com; spf=pass (domain of visa.com designates 198.241.162.10 as permitted sender) smtp.mailfrom=visa.com; dkim=pass header.i=visa.com; dmarc=pass (p=quarantine) header.from=DoNotReplyAlertadeComprasVisa@visa.com
+Received: from cportal5.visa.com (EHLO cportal5.visa.com) ([198.241.162.10])
+          by smtp.purelymail.com (Purelymail SMTP) with ESMTPS id 1468405585
+          for <diego@kiedanski.com>
+          (version=TLSv1.2 cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384);
+          Fri, 02 Jan 2026 04:29:02 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+  d=visa.com; i=@visa.com; q=dns/txt; s=cportal;
+  t=1767328142; x=1798864142;
+  h=mime-version:from:to:date:subject:
+   content-transfer-encoding:message-id;
+  bh=BN1SafX/+p0F+YIJxfjN5vp9JAoEtLjH6PY/bGfRtb8=;
+  b=dm4uS2W9ro8lszZuiJ8u70FZ8B5ALl7FxPcAqVUZEuTos57BBKmWfyWp
+   1E7sE7x3M/ddhaBG1dHfa+2hJ+vejwRPdKMsTfbg6QL0rwTEUBwo7L/ia
+   a3v/uLDT/wrE/pDbASR/I233owkiAgR2/EpjHp1/3HgVXwLO5BfYJL13F
+   g=;
+X-CSE-ConnectionGUID: 5ZfVlZ3WT4O3KtQKHEfQaQ==
+X-CSE-MsgGUID: ohNOza9MQvqbmPkOn2ZeEQ==
+Message-Id: <8efa7b$bo67ac@cportal5.visa.com>
+Received: from DoNotReplyAlertadeComprasVisa@visa.com by cportal5.visa.com, with HTTPS;
+ 02 Jan 2026 04:29:02 -0000
+MIME-Version: 1.0
+From: "Alerta de Compras Visa" <DoNotReplyAlertadeComprasVisa@visa.com>
+To: diego@kiedanski.com
+Date: 2 Jan 2026 04:29:02 +0000
+Subject: Alerta de Compras Visa
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+DQoNCiAgICANCiAgICANCiAgICANCiAgICANCg0KPC9oZWFkPg0K
+DQo8Ym9keT4NCg0KICAgIA0KICAgIDxpbWcgc3JjPSJodHRwczovL2ltZ2N0bC52aXNh
+LmNvbS9JbWFnZUNhdGFsb2cvS3hsSGlOMDFSVXVXQ2l4UzNmMTVidyIgYWx0PSIiPg0K
+DQogICAgPGhyPg0KDQogICAgICAgIDxwPlN1IHRhcmpldGEgVmlzYSBjb24gdGVybWlu
+YWNpw7NuIDMwNDggc2UgYWNhYmEgZGUgdXNhciBlbiBlbCBleHRlcmlvciBwYXJhIGxh
+IHNpZ3VpZW50ZSB0cmFuc2FjY2nDs246PGJyPjxicj4KQ29tZXJjaW86IEVhc3lQYXJr
+IE95PGJyPgpQYcOtczogRklOPGJyPgpDaXVkYWQ6ICBlYXN5cGFyay5maTxicj4KVGFy
+amV0YTogMzA0ODxicj4KQXV0b3JpemFjacOzbjogODYxOTAzPGJyPgpSZWZlcmVuY2lh
+OiBGYWxzZTxicj4KVGlwbyBkZSB0cmFuc2FjY2nDs246IENvbXByYTxicj4KTW9uZWRh
+OiBFVVI8YnI+Ck1vbnRvOiA0Ljk5IChhcHJveGltYWRhbWVudGUgNi4wNSBVU0QpPGJy
+Pjxicj4KU2kgbm8gcmVjb25vY2UgZXN0YSB0cmFuc2FjY2nDs24sIHBvciBmYXZvciBs
+bGFtZSBkZSBpbm1lZGlhdG8gYWwgbsO6bWVybyBkZSBzZXJ2aWNpbyBhbCBjbGllbnRl
+IHF1ZSBmaWd1cmEgYWwgZG9yc28gZGUgc3UgdGFyamV0YSBWaXNhLiA8YnI+IAo8YnI+
+ClBhcmEgZGFyc2UgZGUgYmFqYSBkZSBlc3RlIHRpcG8gZGUgYWxlcnRhcywgaW5pY2ll
+IHNlc2nDs24gZW4gc3UgY3VlbnRhIHkgYWN0dWFsaWNlIHN1cyBzdXNjcmlwY2lvbmVz
+IGEgYWxlcnRhcy48L3A+DQogICAgDQogICAgPHA+QWxlcnRhIGRlIENvbXByYXMgVmlz
+YTwvcD4NCg0KICAgIDxocj4NCiAgICA8cD4gwr9EZW1hc2lhZG8gY29udGVuaWRvIGVu
+IHR1IGJhbmRlamEgZGUgZW50cmFkYT8gPGEgaHJlZj0iaHR0cHM6Ly9wdXJjaGFzZWFs
+ZXJ0cy52aXNhLmNvbS92Y2Etd2ViL3Vuc3Vic2NyaWJlP2xhbmc9ZXMtNDE5JmFtcDtj
+b21tdW5pdHlDb2RlPVBBJkV4dGVybmFsQ3VzdG9tZXJJZD1lNTZkZWM1MC00ZjQ0LTRh
+YjAtZWU3My0xZGFmYjcyZjlhMDEmSGFzaGVkQ3VzdG9tZXJJZD1CeUJDTnQ1MkVMeVNj
+c1l4MzFBQ2xlWkQ0KzNOMlpDQmltQVpwTURGRWNBPSZFbWFpbEFkZHJlc3M9ZGllZ29A
+a2llZGFuc2tpLmNvbSI+IEFudWxhciBsYSBzdXNjcmlwY2nDs24gYSBsYXMgYWxlcnRh
+cyBwb3IgY29ycmVvIGVsZWN0csOzbmljbyA8L2E+IDwvcD4NCiAgICA8cD4gRXN0ZSBj
+b3JyZW8gZWxlY3Ryw7NuaWNvIHNlIGVudmnDsyBkZXNkZSB1bmEgZGlyZWNjacOzbiBx
+dWUgbm8gcHVlZGUgYWNlcHRhciBtZW5zYWplcyBlbnRyYW50ZXMuIFNpIGNyZWUgcXVl
+IHJlY2liacOzIGVzdGUgY29ycmVvIGVsZWN0csOzbmljbyBwb3IgZXJyb3IsIGlnbsOz
+cmVsbyBvIGNvbXVuw61xdWVzZSBjb24gbm9zb3Ryb3MgYWwgVlBBQXNpc3RlbmNpYUB2
+aXNhLmNvbS4gPC9wPg0KDQoNCjwvYm9keT48L2h0bWw+
+

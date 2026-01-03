@@ -56,7 +56,13 @@ def parse_visa_alert(raw_eml: bytes) -> Dict[str, Any]:
     - source: Tarjeta, prefixed with "visa:" (e.g., visa:3048)
     - currency: Moneda (e.g., USD)
     - amount: Monto (Decimal)
+    - comments: Original amount and currency when approximated (e.g., "Original: 4.99 EUR")
     - external_id: message-id header (fallback: subject hash)
+
+    When the transaction is in a currency other than USD or UYU and includes an
+    approximated USD value (e.g., "4.99 (aproximadamente 6.05 USD)"), the parser
+    will use the approximated USD value as the amount and store the original value
+    in comments.
 
     We ignore Autorización/Referencia for now, but we can extend.
     """
@@ -79,13 +85,37 @@ def parse_visa_alert(raw_eml: bytes) -> Dict[str, Any]:
     currency = (moneda or "").split()[0].replace('<br>', '').upper()
 
     amount: Optional[Decimal] = None
+    original_amount_comment: Optional[str] = None
+
     if monto_raw:
-        try:
-            num = re.search(r"[-+]?\d+[\.,]?\d*", monto_raw)
-            if num:
-                amount = Decimal(num.group(0).replace(',', '.'))
-        except (InvalidOperation, AttributeError):
-            amount = None
+        # Check for approximated USD value: "4.99 (aproximadamente 6.05 USD)"
+        approx_match = re.search(
+            r"([-+]?\d+[.,]?\d*)\s*\(aproximadamente\s+([-+]?\d+[.,]?\d*)\s+USD\)",
+            monto_raw,
+            re.IGNORECASE
+        )
+
+        if approx_match and currency not in ['USD', 'UYU']:
+            # Use approximated USD value as the main amount
+            try:
+                original_amount = Decimal(approx_match.group(1).replace(',', '.'))
+                amount = Decimal(approx_match.group(2).replace(',', '.'))
+                # Store original amount and currency in comment
+                original_amount_comment = f"Original: {original_amount} {currency}"
+                # Change currency to USD since we're using the approximated value
+                currency = 'USD'
+            except (InvalidOperation, AttributeError):
+                # Fallback to regular parsing if conversion fails
+                amount = None
+
+        # Fallback to regular amount extraction if no approximation found
+        if amount is None:
+            try:
+                num = re.search(r"[-+]?\d+[\.,]?\d*", monto_raw)
+                if num:
+                    amount = Decimal(num.group(0).replace(',', '.'))
+            except (InvalidOperation, AttributeError):
+                amount = None
 
     message_id = (mp.message_id or "").strip()
     if not message_id:
@@ -99,6 +129,7 @@ def parse_visa_alert(raw_eml: bytes) -> Dict[str, Any]:
         "source": source,
         "currency": currency,
         "amount": amount,
+        "comments": original_amount_comment or "",
         "external_id": external_id,
         "raw_body": body_text,
         "subject": mp.subject or "",
