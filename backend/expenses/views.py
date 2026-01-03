@@ -1858,13 +1858,23 @@ def api_source_expenses(request):
     except UserPreferences.DoesNotExist:
         convert_to_usd = False
 
-    # Get most recent balance for each (source, currency)
+    # Calculate month boundaries
+    first_day = datetime.date(sel_year, sel_month, 1)
+    ny, nm = next_month(sel_year, sel_month)
+    last_day = datetime.date(ny, nm, 1) - datetime.timedelta(days=1)
+
+    # Get most recent balance for each (source, currency) that is active during selected month
     balances_qs = Balance.objects.filter(
-        user=user
+        user=user,
+        start_date__lte=last_day,  # Balance starts on or before end of month
+    ).filter(
+        # Balance has no end_date OR end_date is after start of month
+        Q(end_date__isnull=True) | Q(end_date__gte=first_day)
     ).select_related('source').order_by('source_id', 'currency', '-start_date')
 
-    # Create map: (source_name, currency) -> balance_amount
+    # Create maps: (source_name, currency) -> balance_amount and start_date
     balance_map = {}
+    balance_start_map = {}
     seen_keys = set()
     for bal in balances_qs:
         if bal.source is None:
@@ -1872,18 +1882,21 @@ def api_source_expenses(request):
         key = (bal.source.name, bal.currency)
         if key not in seen_keys:
             balance_map[key] = bal.amount
+            balance_start_map[key] = bal.start_date
             seen_keys.add(key)
 
-    # Get transactions for selected month with source (filter out null sources)
-    first_day = datetime.date(sel_year, sel_month, 1)
-    ny, nm = next_month(sel_year, sel_month)
+    # Find earliest balance start_date to optimize query
+    earliest_start = first_day
+    if balance_start_map:
+        earliest_start = min(balance_start_map.values())
+
+    # Get transactions from earliest balance start to end of selected month
     next_first = datetime.date(ny, nm, 1)
 
     # Include all non-zero transactions (both positive and negative)
-    # We'll use absolute values when aggregating
     month_qs = Transaction.objects.filter(
         user=user,
-        date__gte=first_day,
+        date__gte=earliest_start,
         date__lt=next_first,
         source__isnull=False,
     ).exclude(amount=0)
@@ -1898,6 +1911,12 @@ def api_source_expenses(request):
             src_name = tx.source.name
             currency = tx.currency
             key = (src_name, currency)
+
+            # Only count transactions from the balance period start date
+            balance_start = balance_start_map.get(key)
+            if balance_start and tx.date < balance_start:
+                continue  # Transaction is before balance period starts
+
             amount_usd = tx.to_usd()
 
             if amount_usd is None:
@@ -1932,6 +1951,11 @@ def api_source_expenses(request):
             src_name = tx.source.name
             currency = tx.currency
             key = (src_name, currency)
+
+            # Only count transactions from the balance period start date
+            balance_start = balance_start_map.get(key)
+            if balance_start and tx.date < balance_start:
+                continue  # Transaction is before balance period starts
 
             if key not in source_currency_totals:
                 source_currency_totals[key] = Decimal('0')
