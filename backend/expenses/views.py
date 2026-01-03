@@ -1786,9 +1786,6 @@ def api_source_expenses(request):
     except UserPreferences.DoesNotExist:
         convert_to_usd = False
 
-    # Get categories map to check counts_to_total flag
-    categories_map = {cat.name: cat.counts_to_total for cat in Category.objects.filter(user=user)}
-
     # Get most recent balance for each (source, currency)
     balances_qs = Balance.objects.filter(
         user=user
@@ -1823,15 +1820,9 @@ def api_source_expenses(request):
         # Convert to USD and group by source+currency (keep balances in native currency)
         source_currency_totals = {}
         missing_rates_count = 0
-        transactions = month_qs.select_related('source', 'category')
+        transactions = month_qs.select_related('source')
 
         for tx in transactions:
-            # Skip transactions from categories that don't count to total
-            cat_name = tx.category.name if tx.category else 'Sin categoría'
-            counts_to_total = categories_map.get(cat_name, True)
-            if not counts_to_total:
-                continue
-
             src_name = tx.source.name
             currency = tx.currency
             key = (src_name, currency)
@@ -1861,15 +1852,9 @@ def api_source_expenses(request):
     else:
         # Group by source AND currency (keep sign: positive = expense, negative = income)
         source_currency_totals = {}
-        transactions = month_qs.select_related('source', 'category')
+        transactions = month_qs.select_related('source')
 
         for tx in transactions:
-            # Skip transactions from categories that don't count to total
-            cat_name = tx.category.name if tx.category else 'Sin categoría'
-            counts_to_total = categories_map.get(cat_name, True)
-            if not counts_to_total:
-                continue
-
             src_name = tx.source.name
             currency = tx.currency
             key = (src_name, currency)
