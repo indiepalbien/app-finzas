@@ -273,6 +273,7 @@ def _create_transaction(msg: UserEmailMessage, parsed: dict) -> int:
             amount=parsed.get("amount"),
             currency=(parsed.get("currency") or "").upper(),
             source=_get_or_create_source(msg.user, parsed.get("source")),
+            comments=parsed.get("comments") or "",
             external_id=external_id,
             status="confirmed",
         )
