@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import date, datetime as datetime_class
 from email.utils import parseaddr
 from typing import Optional
 
@@ -334,7 +334,11 @@ def _create_transaction(msg: UserEmailMessage, parsed: dict) -> int:
         return 1
 
     with transaction.atomic():
-        tx_date = msg.date.date() if msg.date else date.today()
+        # Handle both datetime and date objects
+        if msg.date:
+            tx_date = msg.date.date() if isinstance(msg.date, datetime_class) else msg.date
+        else:
+            tx_date = date.today()
         tx = Tx.objects.create(
             user=msg.user,
             date=tx_date,
