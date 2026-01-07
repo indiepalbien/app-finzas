@@ -10,6 +10,7 @@ from expenses.email_parsers.visa import parse_visa_alert
 from expenses.email_parsers.chase import parse_chase_alert
 from expenses.email_parsers.ibkr import parse_ibkr_trade
 from expenses.email_parsers.alignet import parse_alignet_alert
+from expenses.email_parsers.midinero import parse_midinero_alert
 from expenses.email_parsers.gmail_forwarding import (
     is_gmail_forwarding_confirmation,
     parse_gmail_forwarding_email,
@@ -63,6 +64,8 @@ def process_new_messages() -> int:
                 count += _process_visa_alert(msg)
             elif "alignet" in subject or "código de seguridad" in subject:
                 count += _process_alignet_alert(msg)
+            elif envelope_from == "noreply@midinero.com.uy" or "midinero" in envelope_from or "midinero.com.uy" in (msg.raw_eml or b"").decode("utf-8", errors="ignore").lower():
+                count += _process_midinero_alert(msg)
             else:
                 logger.warning("⚠️  SKIPPED msg_id=%s reason=unrecognized_sender envelope_from=%s",
                               msg.message_id, envelope_from)
@@ -264,6 +267,46 @@ def _process_alignet_alert(msg: UserEmailMessage) -> int:
             msg.processed_at = timezone.now()
             msg.save(update_fields=["processing_error", "processed_at"])
             return 0
+
+        return _create_transaction(msg, parsed)
+
+    except IntegrityError as exc:
+        return _handle_duplicate(msg, parsed, exc)
+
+
+def _process_midinero_alert(msg: UserEmailMessage) -> int:
+    """Process Midinero transaction alert emails."""
+    parsed = None
+    try:
+        parsed = parse_midinero_alert(bytes(msg.raw_eml))
+
+        if not parsed:
+            logger.warning("⚠️  SKIPPED msg_id=%s reason=not_midinero_format", msg.message_id)
+            msg.processing_error = "Not a recognized Midinero format"
+            msg.processed_at = timezone.now()
+            msg.save(update_fields=["processing_error", "processed_at"])
+            return 0
+
+        logger.info("✓ Parsed Midinero email msg_id=%s amount=%s currency=%s description='%s'",
+                   msg.message_id, parsed.get("amount"), parsed.get("currency"),
+                   parsed.get("description", "")[:50])
+
+        # Validate required fields
+        if not parsed.get("amount") or not parsed.get("currency"):
+            logger.warning("⚠️  SKIPPED msg_id=%s reason=missing_amount_currency", msg.message_id)
+            msg.processing_error = "Missing amount or currency"
+            msg.processed_at = timezone.now()
+            msg.save(update_fields=["processing_error", "processed_at"])
+            return 0
+
+        # Override date from parsed if available
+        if parsed.get("date"):
+            try:
+                from datetime import datetime
+                parsed_date = datetime.fromisoformat(parsed["date"]).date()
+                msg.date = parsed_date
+            except (ValueError, TypeError):
+                pass
 
         return _create_transaction(msg, parsed)
 
