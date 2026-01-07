@@ -193,12 +193,16 @@ def parse_midinero_transfer(raw_eml: bytes) -> Dict[str, Any]:
     enviada_match = re.search(r'Enviada.*?<b>([^<]+)</b>', html, re.DOTALL)
     cuenta_origen_match = re.search(r'Cuenta origen.*?([0-9]{6,})', html, re.DOTALL)
     institucion_match = re.search(r'Instituci(?:&oacute;|ó)n destino.*?<b>([^<]+)</b>', html, re.DOTALL)
+    cuenta_destino_match = re.search(r'Cuenta destino.*?<b>([0-9]+)</b>', html, re.DOTALL)
+    nombre_destino_match = re.search(r'Nombre destino.*?<b>([^<]+)</b>', html, re.DOTALL)
     moneda_match = re.search(r'Moneda.*?<b>([^<]+)</b>', html, re.DOTALL)
     total_match = re.search(r'Total Pesos.*?\$\s*([\d.,]+)', html, re.DOTALL)
 
     enviada = enviada_match.group(1).strip() if enviada_match else None
     cuenta_origen = cuenta_origen_match.group(1).strip() if cuenta_origen_match else None
     institucion = institucion_match.group(1).strip() if institucion_match else None
+    cuenta_destino = cuenta_destino_match.group(1).strip() if cuenta_destino_match else None
+    nombre_destino = nombre_destino_match.group(1).strip() if nombre_destino_match else None
     moneda = moneda_match.group(1).strip() if moneda_match else None
     total = total_match.group(1).strip() if total_match else None
 
@@ -207,7 +211,15 @@ def parse_midinero_transfer(raw_eml: bytes) -> Dict[str, Any]:
     currency = _normalize_currency(moneda) if moneda else "UYU"
     message_id = mp.message_id or f"midinero:transfer:{date}:{amount}"
 
-    description = f"Transferencia a {institucion}" if institucion else "Transferencia Midinero"
+    # Build description: "Transferencia a NOMBRE (Institucion, cuenta)"
+    if nombre_destino and institucion and cuenta_destino:
+        description = f"Transferencia a {nombre_destino} ({institucion}, {cuenta_destino})"
+    elif nombre_destino:
+        description = f"Transferencia a {nombre_destino}"
+    elif institucion:
+        description = f"Transferencia a {institucion}"
+    else:
+        description = "Transferencia Midinero"
 
     return {
         "description": description,
